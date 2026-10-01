@@ -29,3 +29,25 @@ Del relevamiento preliminar se identificaron los siguientes requisitos:
 
 - Lenguaje: C# 12.0
 - Plataforma: .NET 8
+
+## Estrategia de ramas
+
+- `main` contiene la versión estable de la API.
+- `development` reúne los cambios aprobados para integración.
+- `feature/nombre-funcionalidad` se crea desde `development` para desarrollar una funcionalidad o una tarea del sprint.
+- `hotfix/descripcion` se crea desde `main` para corregir un problema urgente de la versión estable.
+
+### Integración de cambios
+
+1. Crear una rama `feature/` desde la última versión de `development` y realizar allí los commits.
+2. Abrir un Pull Request de la rama `feature/` hacia `development`.
+3. Solicitar la revisión de otro integrante. El Pull Request debe recibir al menos una aprobación antes de fusionarse.
+4. Para publicar una versión estable, abrir un Pull Request de `development` hacia `main` y obtener una aprobación antes de fusionarlo.
+
+Los cambios en `main` y `development` se integran únicamente mediante Pull Requests; no se realizan commits directos en esas ramas.
+
+### Correcciones urgentes
+
+1. Crear una rama `hotfix/` desde `main` y realizar la corrección allí.
+2. Abrir un Pull Request hacia `main` y obtener la aprobación de otro integrante antes de fusionarlo.
+3. Incorporar la misma corrección en `development` mediante otro Pull Request para que las ramas no diverjan.
