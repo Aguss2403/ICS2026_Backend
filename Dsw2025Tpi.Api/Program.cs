@@ -19,12 +19,6 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // 1. Configurar el Contexto de Base de Datos
-        builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
-        {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-        });
-
         // Add services to the container.
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
@@ -122,22 +116,6 @@ public class Program
 
         app.MapControllers();
         app.MapHealthChecks("/healthcheck");
-
-        // Ejecución del Seeder (Creación de roles automática)
-        using (var scope = app.Services.CreateScope())
-        {
-            var services = scope.ServiceProvider;
-            try
-            {
-                var context = services.GetRequiredService<Dsw2025TpiContext>();
-                DataSeeder.Seed(context);
-            }
-            catch (Exception ex)
-            {
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Ocurrió un error al insertar datos iniciales (Seeding).");
-            }
-        }
 
         app.Run();
     }

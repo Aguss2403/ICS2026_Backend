@@ -30,6 +30,12 @@ Del relevamiento preliminar se identificaron los siguientes requisitos:
 - Lenguaje: C# 12.0
 - Plataforma: .NET 8
 
+## Inicialización local de roles y administrador
+
+La migración e inicialización con EF Core 9.0.6, las variables externas del administrador y las pruebas acotadas están documentadas en [docs/admin-seed.md](docs/admin-seed.md). El administrador está deshabilitado por defecto; la inicialización se ejecuta con la migración, antes de iniciar la API.
+
+[Resultados verificables de este cambio](docs/admin-seed-verification.md).
+
 ## Estrategia de ramas
 
 - `main` contiene la versión estable de la API.
