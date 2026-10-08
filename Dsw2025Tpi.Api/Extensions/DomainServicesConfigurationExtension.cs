@@ -9,8 +9,7 @@ public static class DomainServicesConfigurationExtension
     {
         services.AddDbContext<Dsw2025TpiContext>(options =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("Dsw2025TpiEntities")
-                ?? configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
             var enabledValue = configuration["Seed:Admin:Enabled"];
             var enabled = false;
             if (enabledValue is not null && !bool.TryParse(enabledValue, out enabled))

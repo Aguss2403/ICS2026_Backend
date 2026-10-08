@@ -48,7 +48,7 @@ public class SeedRegistrationTests
     }
 
     [Fact]
-    public void KeepsDevelopmentConnectionWhenBothConnectionNamesExist()
+    public void UsesDefaultConnectionWhenBothConnectionNamesExist()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -59,6 +59,6 @@ public class SeedRegistrationTests
         Assert.Single(services, s => s.ServiceType == typeof(IDbContextOptionsConfiguration<Dsw2025TpiContext>));
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        Assert.Contains("development", scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>().Database.GetConnectionString());
+        Assert.Contains("fallback", scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>().Database.GetConnectionString());
     }
 }

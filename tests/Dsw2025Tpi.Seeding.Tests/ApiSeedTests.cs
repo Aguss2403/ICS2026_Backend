@@ -99,7 +99,7 @@ public class ApiSeedTests
                     // Always use a new database, never the database named by the caller.
                     InitialCatalog = "ICSSeedTests_" + Guid.NewGuid().ToString("N")
                 };
-                builder.UseSetting("ConnectionStrings:Dsw2025TpiEntities", sql.ConnectionString);
+                builder.UseSetting("ConnectionStrings:DefaultConnection", sql.ConnectionString);
             }
             else
             {

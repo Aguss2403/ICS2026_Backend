@@ -14,10 +14,10 @@ Referencia: [inicialización de datos en EF Core](https://learn.microsoft.com/en
 | `Seed__Admin__Username` | Obligatorio si está habilitado, máximo 50 caracteres, sin espacios en los extremos ni caracteres de control. |
 | `Seed__Admin__Email` | Correo válido, sin nombre de presentación, máximo 100 caracteres. |
 | `Seed__Admin__Password` | Obligatoria si está habilitado, no vacía ni solo espacios, máximo 100 caracteres. Se conserva exactamente como se suministra. |
-| `ConnectionStrings__Dsw2025TpiEntities` | Conexión externa a SQL Server. Es el nombre utilizado por development y tiene precedencia sobre `DefaultConnection`. |
+| `ConnectionStrings__DefaultConnection` | Conexión externa a SQL Server. Es la única conexión utilizada por la API en todos los entornos. |
 | `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` | Configuración externa de la autenticación existente; usar una clave sintética de al menos 32 bytes para la comprobación local. |
 
-No hay username, email ni contraseña predeterminados para el administrador. La validación menciona las claves, sin incluir sus valores. No activar `EnableSensitiveDataLogging` ni guardar archivos de credenciales en Git. Las configuraciones antiguas del repositorio siguen fuera del alcance de este cambio: para esta ejecución deben sobreescribirse con datos sintéticos externos.
+No hay username, email ni contraseña predeterminados para el administrador. La validación menciona las claves, sin incluir sus valores. No activar `EnableSensitiveDataLogging` ni guardar archivos de credenciales en Git. La clave JWT y la conexión SQL se suministran externamente; utilizar credenciales sintéticas para esta ejecución.
 
 Los roles siempre se comprueban individualmente. Si falta `admin` o `user`, se inserta únicamente el faltante. Los identificadores existentes se conservan. Con el administrador deshabilitado, se ignoran sus campos y solo se completan los roles.
 
@@ -56,7 +56,7 @@ Esperar a que SQL Server esté listo. Cargar la conexión externa con servidor `
 Cargar también las variables de seed y JWT de la tabla anterior mediante el entorno o un gestor de secretos. Para crear el administrador, `Seed__Admin__Enabled` debe valer `true` y deben estar completos los otros tres campos. No usar credenciales personales. Ejecución:
 
 ```bash
-: "${ConnectionStrings__Dsw2025TpiEntities:?Cargar la conexión externa}"
+: "${ConnectionStrings__DefaultConnection:?Cargar la conexión externa}"
 : "${Jwt__Key:?Cargar una clave JWT sintética externa}"
 : "${Jwt__Issuer:?Cargar el issuer externo}"
 : "${Jwt__Audience:?Cargar el audience externo}"
@@ -91,7 +91,7 @@ dotnet test tests/Dsw2025Tpi.Seeding.Tests \
   --logger 'trx;LogFileName=seed-tests.trx'
 ```
 
-La ejecución predeterminada usa SQLite en memoria: verifica un proveedor relacional real sin acceder a bases existentes. Se prueban ambas rutas del seeder, roles vacíos/parciales/completos, repetición, conservación de identificadores/contraseña/rol, administrador deshabilitado, campos faltantes/inválidos, conflictos de identidad/rol y duplicación del correo. Se comprueba además la configuración real de EF, la precedencia de conexión y el recorrido HTTP de login + alta autorizada de producto (`200`, `401` sin token, `201` con token).
+La ejecución predeterminada usa SQLite en memoria: verifica un proveedor relacional real sin acceder a bases existentes. Se prueban ambas rutas del seeder, roles vacíos/parciales/completos, repetición, conservación de identificadores/contraseña/rol, administrador deshabilitado, campos faltantes/inválidos, conflictos de identidad/rol y duplicación del correo. Se comprueba además la configuración real de EF, el uso exclusivo de DefaultConnection y el recorrido HTTP de login + alta autorizada de producto (`200`, `401` sin token, `201` con token).
 
 Para ejecutar la comprobación HTTP sobre el **esquema migrado de SQL Server**, cargar `ICS_TEST_SQL_CONNECTION` con una conexión externa a una instancia local Docker y un usuario con permiso para crear una base de prueba. La prueba reemplaza siempre el nombre de base por `ICSSeedTests_<GUID>`; nunca migra ni borra la base nombrada en la conexión suministrada:
 
@@ -104,4 +104,4 @@ dotnet test tests/Dsw2025Tpi.Seeding.Tests \
 
 Esta variante aplica la migración existente, repite con `MigrateAsync` y verifica login, JWT de rol admin, producto persistido y ausencia de Customer. Deja la base de prueba creada para inspección; no elimina bases ni volúmenes. Los demás casos continúan verificándose con SQLite en la suite predeterminada.
 
-Ver [resultados de la ejecución realizada](admin-seed-verification.md) para distinguir las comprobaciones ejecutadas de las pendientes por restricciones del entorno.
+Ver [resultados de la ejecución realizada](admin-seed-verification.md) para consultar las comprobaciones de integración con SQLite y SQL Server.
