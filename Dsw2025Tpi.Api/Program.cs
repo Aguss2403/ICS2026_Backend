@@ -114,22 +114,6 @@ public class Program
         app.MapControllers();
         app.MapHealthChecks("/healthcheck");
 
-        // Ejecución del Seeder (Creación de roles automática)
-        using (var scope = app.Services.CreateScope())
-        {
-            var services = scope.ServiceProvider;
-            try
-            {
-                var context = services.GetRequiredService<Dsw2025TpiContext>();
-                DataSeeder.Seed(context);
-            }
-            catch (Exception ex)
-            {
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Ocurrió un error al insertar datos iniciales (Seeding).");
-            }
-        }
-
         app.Run();
     }
 }
