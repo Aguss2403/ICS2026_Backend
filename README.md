@@ -30,6 +30,12 @@ Del relevamiento preliminar se identificaron los siguientes requisitos:
 - Lenguaje: C# 12.0
 - Plataforma: .NET 8
 
+## Inicialización local de roles y administrador
+
+La migración e inicialización con EF Core 9.0.6, las variables externas del administrador y las pruebas acotadas están documentadas en [docs/admin-seed.md](docs/admin-seed.md). El administrador está deshabilitado por defecto; la inicialización se ejecuta con la migración, antes de iniciar la API.
+
+[Resultados verificables de este cambio](docs/admin-seed-verification.md).
+
 ## Estrategia de ramas
 
 - `main` contiene la versión estable de la API.
@@ -52,44 +58,65 @@ Los cambios en `main` y `development` se integran únicamente mediante Pull Requ
 2. Abrir un Pull Request hacia `main` y obtener la aprobación de otro integrante antes de fusionarlo.
 3. Incorporar la misma corrección en `development` mediante otro Pull Request para que las ramas no diverjan.
 
-## Ejecución Local con Docker Compose
+## Configuración local y contenedor de la API
 
-Para levantar el entorno completo localmente, debes seguir dos fases. Esto asegura que la base de datos esté lista e inicializada con los datos por defecto antes de que arranque la API en Producción.
+Requisitos: SDK .NET 8 para ejecutar desde el host, Docker Desktop con contenedores Linux para construir la imagen y una base SQL Server preparada con la migración del repositorio.
 
-### Fase 1: Inicialización de la Base de Datos SQL Server
-1. Iniciar únicamente el contenedor de SQL Server:
-   ```bash
-   docker compose up -d sqlserver
-   ```
-2. Esperar a que el contenedor esté _healthy_.
-3. Aplicar las migraciones desde el host utilizando la herramienta `dotnet ef` (v9.0.6):
-   ```bash
-   dotnet ef database update --project Dsw2025Tpi.Data --startup-project Dsw2025Tpi.Api
-   ```
+La conexión utilizada por toda la API es `ConnectionStrings:DefaultConnection`. El contexto se registra una sola vez. `Dsw2025TpiEntities` ya no se utiliza.
 
-### Fase 2: Ejecución de la API
-1. Una vez que la base de datos tiene el esquema correcto, levanta el contenedor de la API:
-   ```bash
-   docker compose up -d api
-   ```
-2. La API estará disponible en [http://localhost:5142](http://localhost:5142) y consultará a la base de datos a través de la red interna de Docker. 
-3. La interfaz de Swagger estará accesible en `http://localhost:5142/swagger/index.html`.
+| Variable | Requisito / valor predeterminado |
+| --- | --- |
+| `ConnectionStrings__DefaultConnection` | Obligatoria en Production; debe indicar servidor y base SQL Server. Development conserva un ejemplo LocalDB sin contraseña. |
+| `Jwt__Key` | Obligatoria en todos los entornos; clave privada de al menos 32 bytes UTF-8 para HS256. No existe una clave incorporada al código. |
+| `Jwt__Issuer` | `Dsw2025Tpi.Api`; puede reemplazarse por entorno. |
+| `Jwt__Audience` | `Dsw2025Tpi.Api.Users`; puede reemplazarse por entorno. |
+| `Jwt__ExpireInMinutes` | `60`; debe ser un entero positivo. |
+| `ASPNETCORE_ENVIRONMENT` | La imagen utiliza `Production`; seleccionar explícitamente el entorno al ejecutar desde el host. |
+| `ASPNETCORE_URLS` | Opcional; por ejemplo `http://+:8080` en Docker o `http://127.0.0.1:5142` en el host. La imagen escucha HTTP 8080 por defecto. |
 
-### Variables de Entorno
-Copia el archivo `.env.example` a `.env` y ajusta los valores (por ejemplo, `DB_PASSWORD` y los puertos si están ocupados):
-```bash
-cp .env.example .env
+El arranque valida SQL y los parámetros JWT antes de construir el servidor. Los errores indican la configuración ausente o inválida y no incluyen sus valores secretos. La validación del formato no garantiza que SQL esté disponible: se debe comprobar una operación real de datos.
+
+### Desde PowerShell
+
+Proporcionar los valores privados mediante el entorno de la terminal, sin incorporarlos a Git. Las siguientes variables de sesión deben existir antes de ejecutar:
+
+```powershell
+$env:ConnectionStrings__DefaultConnection = $conexionSqlLocal
+$env:Jwt__Key = $claveJwtLocal
+$env:ASPNETCORE_ENVIRONMENT = 'Production'
+$env:ASPNETCORE_URLS = 'http://127.0.0.1:5142'
+dotnet run --project Dsw2025Tpi.Api --configuration Release --no-launch-profile
 ```
-*(Nota: El archivo `.env` ya se encuentra excluido de Git para proteger los secretos).*
 
-### Operaciones de Mantenimiento
-- **Detener los servicios conservando el volumen de datos:**
-  ```bash
-  docker compose down
-  ```
-- **Borrado INTENCIONAL de la base de prueba:**
-  Si deseas reiniciar la base de datos desde cero (perdiendo todos los datos), debes eliminar el volumen asociado al bajar los contenedores:
-  ```bash
-  docker compose down -v
-  ```
+`$conexionSqlLocal` y `$claveJwtLocal` representan valores privados suministrados por el integrante. Si se usa un perfil de lanzamiento, este puede reemplazar el entorno y el puerto; por eso el ejemplo utiliza `--no-launch-profile`.
 
+### Docker
+
+```powershell
+Copy-Item .env.example .env
+# Completar .env con configuración y credenciales sintéticas de la base local.
+docker build -t ics2026-backend:local .
+docker run -d --name ics2026-api --env-file .env -p 127.0.0.1:5142:8080 ics2026-backend:local
+Invoke-RestMethod http://127.0.0.1:5142/healthcheck
+Invoke-RestMethod http://127.0.0.1:5142/api/products
+docker stop ics2026-api
+docker rm ics2026-api
+```
+
+El puerto 5142 del host debe estar libre. Se puede publicar otro puerto sin cambiar el 8080 interno. `.env` está excluido de Git y del contexto Docker; el ejemplo no contiene credenciales reales. `docker --env-file` no expande referencias a otras variables: escribir la conexión completa y no envolver los valores en comillas de shell.
+
+En Docker Desktop, para acceder a SQL publicado en el host se puede utilizar `Server=host.docker.internal,14333;Database=ICS2026_LocalTest;...`. `localhost` dentro del contenedor identifica al propio contenedor. Cuando SQL se ejecute en una red de Compose, utilizar el nombre de su servicio y su puerto interno. `TrustServerCertificate=True` puede utilizarse exclusivamente para la base local de prueba; el ejemplo de conexión debe adaptarse a las credenciales y políticas del entorno.
+
+La imagen final contiene el runtime ASP.NET Core y la API publicada, utiliza el usuario sin privilegios `app` y no incluye el SDK, el repositorio Git ni los archivos locales de configuración.
+
+Swagger está habilitado también en Production para las comprobaciones de esta etapa local. La inicialización de roles y administrador opcional se ejecuta al aplicar las migraciones. Para levantar SQL, migraciones y API con un único flujo, seguir [las instrucciones de Docker Compose](docs/docker-compose.md).
+
+### Pruebas de configuración
+
+```powershell
+dotnet test Dsw2025Tpi.sln --configuration Release
+```
+
+El proyecto `Dsw2025Tpi.Api.Tests` verifica configuración completa, valores obligatorios ausentes, clave corta, expiración inválida, conexión SQL mal formada, ausencia de secretos en los errores y uso exclusivo de `DefaultConnection`. Estas pruebas no requieren SQL real y no reemplazan la suite de negocio del TP1.
+
+Referencias técnicas: [configuración por entorno](https://learn.microsoft.com/aspnet/core/fundamentals/configuration/?view=aspnetcore-8.0) y [contenedores ASP.NET Core](https://learn.microsoft.com/aspnet/core/host-and-deploy/docker/building-net-docker-images?view=aspnetcore-8.0).
