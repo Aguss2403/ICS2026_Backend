@@ -3,10 +3,8 @@ using Dsw2025Tpi.Application.Interfaces; // <-- Agregado
 using Dsw2025Tpi.Application.Services;   // <-- Agregado
 using Dsw2025Tpi.Data;
 using Dsw2025Tpi.Data.Repositories;
-using Dsw2025Tpi.Domain.Entities;
 using Dsw2025Tpi.Domain.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -18,18 +16,13 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
-        // 1. Configurar el Contexto de Base de Datos
-        builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
-        {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-        });
+        var settings = RuntimeConfiguration.Read(builder.Configuration);
 
         // Add services to the container.
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
 
-        // Configuración de Swagger
+        // ConfiguraciÃ³n de Swagger
         builder.Services.AddSwaggerGen(o =>
         {
             o.SwaggerDoc("v1", new OpenApiInfo
@@ -65,10 +58,8 @@ public class Program
 
         builder.Services.AddHealthChecks();
 
-        // 2. Configuración de JWT
-        var jwtConfig = builder.Configuration.GetSection("Jwt");
-        var keyText = jwtConfig["Key"] ?? throw new ArgumentException("Falta la configuración Jwt:Key en appsettings");
-        var key = Encoding.UTF8.GetBytes(keyText);
+        // 2. ConfiguraciÃ³n de JWT
+        var key = Encoding.UTF8.GetBytes(settings.JwtKey);
 
         builder.Services.AddAuthentication(options =>
         {
@@ -85,8 +76,8 @@ public class Program
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtConfig["Issuer"],
-                ValidAudience = jwtConfig["Audience"],
+                ValidIssuer = settings.JwtIssuer,
+                ValidAudience = settings.JwtAudience,
                 IssuerSigningKey = new SymmetricSecurityKey(key)
             };
         });
@@ -101,11 +92,8 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+        app.UseSwagger();
+        app.UseSwaggerUI();
 
         app.UseHttpsRedirection();
 
@@ -122,22 +110,6 @@ public class Program
 
         app.MapControllers();
         app.MapHealthChecks("/healthcheck");
-
-        // Ejecución del Seeder (Creación de roles automática)
-        using (var scope = app.Services.CreateScope())
-        {
-            var services = scope.ServiceProvider;
-            try
-            {
-                var context = services.GetRequiredService<Dsw2025TpiContext>();
-                DataSeeder.Seed(context);
-            }
-            catch (Exception ex)
-            {
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Ocurrió un error al insertar datos iniciales (Seeding).");
-            }
-        }
 
         app.Run();
     }
