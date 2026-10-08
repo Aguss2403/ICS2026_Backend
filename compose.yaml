@@ -17,27 +17,6 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  db-init:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrations
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=Dsw2025Tpi;User Id=sa;Password=${DB_PASSWORD:?Completar DB_PASSWORD en .env};Encrypt=True;TrustServerCertificate=True;"
-      Jwt__Key: ${JWT_KEY:?Completar JWT_KEY en .env}
-      Jwt__Issuer: ${JWT_ISSUER:-Dsw2025Tpi.Api}
-      Jwt__Audience: ${JWT_AUDIENCE:-Dsw2025Tpi.Api.Users}
-      Jwt__ExpireInMinutes: ${JWT_EXPIRE_IN_MINUTES:-60}
-      Seed__Admin__Enabled: ${SEED_ADMIN_ENABLED:-false}
-      Seed__Admin__Username: ${SEED_ADMIN_USERNAME:-}
-      Seed__Admin__Email: ${SEED_ADMIN_EMAIL:-}
-      Seed__Admin__Password: ${SEED_ADMIN_PASSWORD:-}
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    restart: "no"
-
   api:
     build:
       context: .
@@ -54,8 +33,8 @@ services:
     ports:
       - "127.0.0.1:${API_PORT:-5142}:8080"
     depends_on:
-      db-init:
-        condition: service_completed_successfully
+      sqlserver:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

@@ -109,7 +109,7 @@ En Docker Desktop, para acceder a SQL publicado en el host se puede utilizar `Se
 
 La imagen final contiene el runtime ASP.NET Core y la API publicada, utiliza el usuario sin privilegios `app` y no incluye el SDK, el repositorio Git ni los archivos locales de configuración.
 
-Swagger está habilitado también en Production para las comprobaciones de esta etapa local. La inicialización de roles y administrador opcional se ejecuta al aplicar las migraciones. Para levantar SQL, migraciones y API con un único flujo, seguir [las instrucciones de Docker Compose](docs/docker-compose.md).
+Swagger está habilitado también en Production para las comprobaciones de esta etapa local. La inicialización de roles y administrador opcional se ejecuta al aplicar las migraciones. Para preparar SQL desde el host y luego iniciar la API, seguir [las instrucciones de Docker Compose](docs/docker-compose.md).
 
 ### Pruebas de configuración
 

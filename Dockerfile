@@ -8,10 +8,6 @@ RUN dotnet restore Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj
 COPY . .
 RUN dotnet publish Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
-FROM build AS migrations
-RUN dotnet tool install dotnet-ef --tool-path /tools --version 9.0.6
-ENTRYPOINT ["/tools/dotnet-ef", "database", "update", "--project", "Dsw2025Tpi.Data", "--startup-project", "Dsw2025Tpi.Api", "--configuration", "Release", "--no-build"]
-
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production \
