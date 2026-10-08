@@ -1,4 +1,4 @@
-using Dsw2025Tpi.Api.Utils;
+ï»¿using Dsw2025Tpi.Api.Utils;
 using Dsw2025Tpi.Application.Interfaces; // <-- Agregado
 using Dsw2025Tpi.Application.Services;   // <-- Agregado
 using Dsw2025Tpi.Data;
@@ -29,7 +29,7 @@ public class Program
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
 
-        // Configuración de Swagger
+        // Configuraciï¿½n de Swagger
         builder.Services.AddSwaggerGen(o =>
         {
             o.SwaggerDoc("v1", new OpenApiInfo
@@ -65,9 +65,9 @@ public class Program
 
         builder.Services.AddHealthChecks();
 
-        // 2. Configuración de JWT
+        // 2. Configuraciï¿½n de JWT
         var jwtConfig = builder.Configuration.GetSection("Jwt");
-        var keyText = jwtConfig["Key"] ?? throw new ArgumentException("Falta la configuración Jwt:Key en appsettings");
+        var keyText = jwtConfig["Key"] ?? throw new ArgumentException("Falta la configuraciï¿½n Jwt:Key en appsettings");
         var key = Encoding.UTF8.GetBytes(keyText);
 
         builder.Services.AddAuthentication(options =>
@@ -101,11 +101,8 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+        app.UseSwagger();
+        app.UseSwaggerUI();
 
         app.UseHttpsRedirection();
 
@@ -123,7 +120,7 @@ public class Program
         app.MapControllers();
         app.MapHealthChecks("/healthcheck");
 
-        // Ejecución del Seeder (Creación de roles automática)
+        // Ejecuciï¿½n del Seeder (Creaciï¿½n de roles automï¿½tica)
         using (var scope = app.Services.CreateScope())
         {
             var services = scope.ServiceProvider;
@@ -135,7 +132,7 @@ public class Program
             catch (Exception ex)
             {
                 var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Ocurrió un error al insertar datos iniciales (Seeding).");
+                logger.LogError(ex, "Ocurriï¿½ un error al insertar datos iniciales (Seeding).");
             }
         }
 

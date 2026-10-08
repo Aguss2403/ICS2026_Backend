@@ -51,3 +51,45 @@ Los cambios en `main` y `development` se integran únicamente mediante Pull Requ
 1. Crear una rama `hotfix/` desde `main` y realizar la corrección allí.
 2. Abrir un Pull Request hacia `main` y obtener la aprobación de otro integrante antes de fusionarlo.
 3. Incorporar la misma corrección en `development` mediante otro Pull Request para que las ramas no diverjan.
+
+## Ejecución Local con Docker Compose
+
+Para levantar el entorno completo localmente, debes seguir dos fases. Esto asegura que la base de datos esté lista e inicializada con los datos por defecto antes de que arranque la API en Producción.
+
+### Fase 1: Inicialización de la Base de Datos SQL Server
+1. Iniciar únicamente el contenedor de SQL Server:
+   ```bash
+   docker compose up -d sqlserver
+   ```
+2. Esperar a que el contenedor esté _healthy_.
+3. Aplicar las migraciones desde el host utilizando la herramienta `dotnet ef` (v9.0.6):
+   ```bash
+   dotnet ef database update --project Dsw2025Tpi.Data --startup-project Dsw2025Tpi.Api
+   ```
+
+### Fase 2: Ejecución de la API
+1. Una vez que la base de datos tiene el esquema correcto, levanta el contenedor de la API:
+   ```bash
+   docker compose up -d api
+   ```
+2. La API estará disponible en [http://localhost:5142](http://localhost:5142) y consultará a la base de datos a través de la red interna de Docker. 
+3. La interfaz de Swagger estará accesible en `http://localhost:5142/swagger/index.html`.
+
+### Variables de Entorno
+Copia el archivo `.env.example` a `.env` y ajusta los valores (por ejemplo, `DB_PASSWORD` y los puertos si están ocupados):
+```bash
+cp .env.example .env
+```
+*(Nota: El archivo `.env` ya se encuentra excluido de Git para proteger los secretos).*
+
+### Operaciones de Mantenimiento
+- **Detener los servicios conservando el volumen de datos:**
+  ```bash
+  docker compose down
+  ```
+- **Borrado INTENCIONAL de la base de prueba:**
+  Si deseas reiniciar la base de datos desde cero (perdiendo todos los datos), debes eliminar el volumen asociado al bajar los contenedores:
+  ```bash
+  docker compose down -v
+  ```
+
