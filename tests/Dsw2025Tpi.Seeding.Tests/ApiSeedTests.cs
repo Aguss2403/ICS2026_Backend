@@ -48,6 +48,13 @@ public class ApiSeedTests
             Assert.Empty(context.Customers);
         }
 
+        var emptyCatalog = await client.GetAsync("/api/products");
+        Assert.Equal(HttpStatusCode.OK, emptyCatalog.StatusCode);
+        var emptyPage = await emptyCatalog.Content.ReadFromJsonAsync<ProductModel.ResponsePagination>();
+        Assert.NotNull(emptyPage);
+        Assert.Empty(emptyPage.Items);
+        Assert.Equal(0, emptyPage.Total);
+
         var login = await client.PostAsJsonAsync("/api/auth/login",
             new RequestLoginModel("seed-test-admin", DataSeederTests.Password));
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
@@ -66,6 +73,12 @@ public class ApiSeedTests
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var result = await created.Content.ReadFromJsonAsync<ProductModel.ProductResponse>();
         Assert.NotNull(result);
+        var noMatches = await client.GetAsync("/api/products?search=does-not-match-seed-smoke");
+        Assert.Equal(HttpStatusCode.OK, noMatches.StatusCode);
+        var noMatchesPage = await noMatches.Content.ReadFromJsonAsync<ProductModel.ResponsePagination>();
+        Assert.NotNull(noMatchesPage);
+        Assert.Empty(noMatchesPage.Items);
+        Assert.Equal(0, noMatchesPage.Total);
         using var verifyScope = factory.Services.CreateScope();
         var verify = verifyScope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>();
         Assert.Equal(result.Id, (await verify.Products.SingleAsync()).Id);

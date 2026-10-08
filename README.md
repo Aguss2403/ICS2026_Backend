@@ -113,6 +113,8 @@ Swagger está habilitado también en Production para las comprobaciones de esta 
 
 ### Pruebas de configuración
 
+Para comprobar los flujos HTTP, permisos básicos y persistencia de la API dockerizada, seguir [el procedimiento de validación](docs/docker-api-validation.md).
+
 ```powershell
 dotnet test Dsw2025Tpi.sln --configuration Release
 ```

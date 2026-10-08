@@ -68,4 +68,4 @@ docker compose up -d api
 
 Estos comandos conservan el volumen y los datos. Para repetir la migración y la inicialización sobre esa base, ejecutar de nuevo la fase 1 sin borrar el volumen. La disponibilidad de SQL y la preparación del esquema son pasos distintos.
 
-El catálogo queda vacío en una base nueva. Los productos de prueba se crean mediante la API con un JWT de administrador. La consulta del catálogo vacío tiene una incidencia preexistente: responde HTTP 500. Su corrección corresponde a la tarea separada de comprobaciones HTTP y no forma parte de esta integración.
+El catálogo queda vacío en una base nueva y responde HTTP 200 con items vacío y total cero. Los productos de prueba se crean mediante la API con un JWT de administrador. Ver [comprobaciones HTTP y persistencia](docker-api-validation.md).
