@@ -109,9 +109,11 @@ En Docker Desktop, para acceder a SQL publicado en el host se puede utilizar `Se
 
 La imagen final contiene el runtime ASP.NET Core y la API publicada, utiliza el usuario sin privilegios `app` y no incluye el SDK, el repositorio Git ni los archivos locales de configuración.
 
-Esta parte no modifica el comportamiento actual de Swagger: todavía está habilitado solamente en Development. Para probarlo con la imagen mientras se integra el trabajo correspondiente, se puede ejecutar con `-e ASPNETCORE_ENVIRONMENT=Development` y una conexión SQL externa. La prueba de Production verifica `/healthcheck` y una operación contra SQL. La habilitación de Swagger en Production, la inicialización del administrador y Compose se integran por separado.
+Swagger está habilitado también en Production para las comprobaciones de esta etapa local. La inicialización de roles y administrador opcional se ejecuta al aplicar las migraciones. Para preparar SQL desde el host y luego iniciar la API, seguir [las instrucciones de Docker Compose](docs/docker-compose.md).
 
 ### Pruebas de configuración
+
+Para comprobar los flujos HTTP, permisos básicos y persistencia de la API dockerizada, seguir [el procedimiento de validación](docs/docker-api-validation.md).
 
 ```powershell
 dotnet test Dsw2025Tpi.sln --configuration Release

@@ -5,6 +5,7 @@
 .github
 .vs
 .vscode
+**/.local-tools
 **/.env
 **/.env.*
 **/appsettings.Local.json
