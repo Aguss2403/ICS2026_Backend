@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{228B0BE3
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dsw2025Tpi.Seeding.Tests", "tests\Dsw2025Tpi.Seeding.Tests\Dsw2025Tpi.Seeding.Tests.csproj", "{24E1C15E-F0CE-45F8-BD4E-2539E2026315}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dsw2025Tpi.Orders.Tests", "tests\Dsw2025Tpi.Orders.Tests\Dsw2025Tpi.Orders.Tests.csproj", "{C67C4336-C53B-4062-A02D-E62BE37F0D48}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 		{24E1C15E-F0CE-45F8-BD4E-2539E2026315}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24E1C15E-F0CE-45F8-BD4E-2539E2026315}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{24E1C15E-F0CE-45F8-BD4E-2539E2026315}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C67C4336-C53B-4062-A02D-E62BE37F0D48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C67C4336-C53B-4062-A02D-E62BE37F0D48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C67C4336-C53B-4062-A02D-E62BE37F0D48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C67C4336-C53B-4062-A02D-E62BE37F0D48}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -59,6 +65,7 @@ Global
 		{E34B93C6-D34C-409A-AAF4-908795FFEB4E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{AD606BCA-F693-45E2-A6BD-3C7FCBADE0D2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{24E1C15E-F0CE-45F8-BD4E-2539E2026315} = {228B0BE3-EA26-44B9-B138-DAB98F9B9916}
+		{C67C4336-C53B-4062-A02D-E62BE37F0D48} = {228B0BE3-EA26-44B9-B138-DAB98F9B9916}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E30FA157-23DF-49B5-AD66-0394DCB75767}
