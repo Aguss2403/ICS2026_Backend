@@ -11,7 +11,10 @@ Ejecución realizada el 19 de octubre de 2026 desde un clon nuevo de `feature/do
 | Healthcheck | `GET /healthcheck` | 200 `Healthy`. |
 | Swagger UI | `GET /swagger/index.html` | 200 `text/html`. |
 | OpenAPI | `GET /swagger/v1/swagger.json` | 200 `application/json`, OpenAPI 3.0.1 con 8 rutas (Auth, orders, products). |
+| Bearer en OpenAPI | `components.securitySchemes` y `security` de swagger.json | Esquema `Bearer` (apiKey en el header `Authorization`) y requisito global `Bearer`; Swagger UI permite ingresar el token. |
 | Operación autenticada | `POST /api/Auth/login` y `POST /api/products` con JWT admin | Login 200 con rol admin; producto creado (201). |
+| Sin token | `POST /api/products` sin Authorization | 401. |
+| Rol sin permisos | Registro de un usuario nuevo (200), login (200, rol user) y `POST /api/products` / `GET /api/products/admin` con ese JWT | 403 en ambos; con JWT admin, `GET /api/products/admin` responde 200. Consultar Swagger no otorga acceso. |
 | Reinicio conservando el volumen | `docker compose down` y `docker compose up -d api` | Volumen `sqlserver_data` conservado; el administrador mantiene el mismo Id y `GET /api/products/{id}` devuelve el producto creado antes del reinicio. |
 | Pruebas | `dotnet test Dsw2025Tpi.sln` con ICS_TEST_ADMIN_PASSWORD y ICS_TEST_JWT_KEY sintéticas | 64 aprobadas: 25 de configuración y 39 de inicialización. |
 | Pruebas con SQL Server de Compose | `ApiSeedTests` con ICS_TEST_SQL_CONNECTION apuntando a 127.0.0.1:14333 | 1 aprobada sobre una base nueva ICSSeedTests_<GUID>; la base Dsw2025Tpi no se modificó. |
