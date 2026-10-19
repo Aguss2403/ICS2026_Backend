@@ -41,8 +41,15 @@ Después de preparar la cuenta, deshabilitar el seed y retirar su contraseña de
 
 ```powershell
 docker compose up -d --build api
-Invoke-RestMethod http://127.0.0.1:5142/healthcheck
+$api = "http://$(docker compose port api 8080)"
+$healthy = $false
+for ($i = 0; $i -lt 30 -and -not $healthy; $i++) {
+    try { $healthy = (Invoke-RestMethod "$api/healthcheck" -TimeoutSec 5) -eq 'Healthy' } catch { Start-Sleep -Seconds 2 }
+}
+if (-not $healthy) { throw 'La API no respondió Healthy en /healthcheck' }
 ```
+
+El contenedor api queda iniciado antes de que Kestrel acepte conexiones, y el servicio no define healthcheck de Docker: una consulta inmediata puede cerrar la conexión. Por eso se reintenta /healthcheck hasta obtener Healthy. docker compose port obtiene la dirección publicada según API_PORT sin mostrar credenciales.
 
 Swagger está disponible en http://127.0.0.1:<API_PORT>/swagger/index.html con Production. La API espera SQL saludable y utiliza DefaultConnection con servidor sqlserver,1433 y base Dsw2025Tpi. Dentro de Docker no se utilizan LocalDB ni el puerto publicado del host. La imagen de la API conserva únicamente el runtime ASP.NET Core y ejecuta con el usuario sin privilegios app.
 
@@ -64,8 +71,11 @@ Las variables ConnectionStrings__DefaultConnection y Jwt__* del mismo ejemplo si
 ```powershell
 docker compose down
 docker compose up -d api
+# Repetir la espera de /healthcheck de la fase 2 antes de consultar la API.
 ```
 
-Estos comandos conservan el volumen y los datos. Para repetir la migración y la inicialización sobre esa base, ejecutar de nuevo la fase 1 sin borrar el volumen. La disponibilidad de SQL y la preparación del esquema son pasos distintos.
+Estos comandos conservan el volumen y los datos (no usar `docker compose down -v`). Para repetir la migración y la inicialización sobre esa base, ejecutar de nuevo la fase 1 sin borrar el volumen. La disponibilidad de SQL y la preparación del esquema son pasos distintos.
 
 El catálogo queda vacío en una base nueva. Los productos de prueba se crean mediante la API con un JWT de administrador. La consulta del catálogo vacío tiene una incidencia preexistente: responde HTTP 500. Su corrección corresponde a la tarea separada de comprobaciones HTTP y no forma parte de esta integración.
+
+Ver [resultados de la ejecución desde un clon](docker-compose-verification.md).
