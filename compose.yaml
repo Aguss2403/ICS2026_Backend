@@ -1,0 +1,41 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Completar DB_PASSWORD en .env}
+    ports:
+      - "127.0.0.1:${SQL_PORT:-14333}:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -C -b || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=Dsw2025Tpi;User Id=sa;Password=${DB_PASSWORD:?Completar DB_PASSWORD en .env};Encrypt=True;TrustServerCertificate=True;"
+      Jwt__Key: ${JWT_KEY:?Completar JWT_KEY en .env}
+      Jwt__Issuer: ${JWT_ISSUER:-Dsw2025Tpi.Api}
+      Jwt__Audience: ${JWT_AUDIENCE:-Dsw2025Tpi.Api.Users}
+      Jwt__ExpireInMinutes: ${JWT_EXPIRE_IN_MINUTES:-60}
+    ports:
+      - "127.0.0.1:${API_PORT:-5142}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
