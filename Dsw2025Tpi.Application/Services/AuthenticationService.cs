@@ -32,7 +32,11 @@ public class AuthenticationService : IAuthenticationService
         if (user == null || user.Password != request.Password)
             throw new InvalidCredentialException("Usuario o contraseña inválidos.");
 
-        var token = _jwtTokenServices.GenerateToken(user.Username, user.Role.Name);
+        var role = user.Role;
+        if (role == null)
+            throw new InvalidCredentialException("Usuario o contraseña inválidos.");
+
+        var token = _jwtTokenServices.GenerateToken(user.Username, role.Name);
 
         // 2. CORRECCIÓN: Usar el constructor del record (paréntesis, no llaves)
         // Mapeamos los datos directamente al orden que definiste en el DTO ResponseLoginModel
@@ -41,7 +45,7 @@ public class AuthenticationService : IAuthenticationService
             user.Id,                                // Id
             user.Username,                          // Username
             user.Email,                             // Email
-            user.Role.Name,                         // Role
+            role.Name,                              // Role
             user.Customer?.Id ?? Guid.Empty,        // CustomerId (Si es null, enviamos Guid vacío)
             user.Customer?.FirstName ?? "",         // FirstName
             user.Customer?.LastName ?? "",          // LastName

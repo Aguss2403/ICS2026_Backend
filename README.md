@@ -36,6 +36,10 @@ La migración e inicialización con EF Core 9.0.6, las variables externas del ad
 
 [Resultados verificables de este cambio](docs/admin-seed-verification.md).
 
+## Validación del rol al iniciar sesión
+
+El login rechaza de forma controlada a un usuario cuyo rol no esté disponible, antes de generar el JWT. Conserva la respuesta `401` de autenticación y el rol de los tokens válidos. Ver [comportamiento y pruebas](docs/authentication-role.md).
+
 ## Estrategia de ramas
 
 - `main` contiene la versión estable de la API.
