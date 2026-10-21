@@ -40,6 +40,10 @@ La migración e inicialización con EF Core 9.0.6, las variables externas del ad
 
 El login rechaza de forma controlada a un usuario cuyo rol no esté disponible, antes de generar el JWT. Conserva la respuesta `401` de autenticación y el rol de los tokens válidos. Ver [comportamiento y pruebas](docs/authentication-role.md).
 
+## Integración continua
+
+La compilación y las pruebas automáticas del backend están explicadas en la [guía de integración continua](docs/continuous-integration.md).
+
 ## Estrategia de ramas
 
 - `main` contiene la versión estable de la API.
