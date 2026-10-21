@@ -15,4 +15,10 @@ Las pruebas de seeding usan SQLite en memoria por defecto. Como el workflow no c
 
 El job tiene permisos de solo lectura sobre el contenido del repositorio. Cualquier error en restauración, compilación, pruebas o construcción Docker hace fallar `validate`. Los valores sintéticos duran solo durante la ejecución del job y no se guardan como secretos del repositorio.
 
+## Consultar los resultados
+
+En un pull request, abrí la sección **Checks** y seleccioná la comprobación de **Backend CI** para ver la ejecución. También podés ir a **Actions → Backend CI** y abrir la ejecución correspondiente; allí seleccioná el job **Validate backend**.
+
+Si todos los pasos aparecen como exitosos, la validación terminó correctamente. Si falla, abrí el paso que figura con error para desplegarlo y consultar su registro, donde se muestra el detalle de la comprobación que falló.
+
 Esta etapa no contiene publicación de imágenes, credenciales de Docker Hub/Azure ni despliegue. Esos pasos se incorporarán en trabajos separados cuando se asignen.
