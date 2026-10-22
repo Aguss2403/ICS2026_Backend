@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+env:
+  DOCKER_IMAGE: ${{ vars.DOCKER_IMAGE }}
+
 jobs:
   validate:
     name: Validate backend
@@ -56,3 +59,65 @@ jobs:
           ICS_TEST_ADMIN_PASSWORD: ${{ steps.test-credentials.outputs.admin_password }}
           ICS_TEST_JWT_KEY: ${{ steps.test-credentials.outputs.jwt_key }}
         run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore
+
+  publish:
+    name: Publish backend image
+    needs: validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify Docker Hub configuration
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [[ -z "$DOCKER_IMAGE" ]]; then
+            echo '::error::The DOCKER_IMAGE repository variable is not configured.'
+            exit 1
+          fi
+          if [[ "$DOCKER_IMAGE" != 'ulisesquiroga/ics2026-backend' ]]; then
+            echo '::error::DOCKER_IMAGE must be ulisesquiroga/ics2026-backend.'
+            exit 1
+          fi
+          if [[ -z "$DOCKERHUB_USERNAME" || -z "$DOCKERHUB_TOKEN" ]]; then
+            echo '::error::DOCKERHUB_USERNAME and DOCKERHUB_TOKEN must be configured as repository secrets.'
+            exit 1
+          fi
+          echo 'Docker Hub variable and secrets are available.'
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and publish validated commit
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
+
+      - name: Add image references to the workflow summary
+        shell: bash
+        run: |
+          {
+            echo '## Docker Hub publication'
+            echo
+            echo "Validated commit: \`${GITHUB_SHA}\`"
+            echo
+            echo 'Published tags:'
+            echo "- \`${DOCKER_IMAGE}:latest\`"
+            echo "- \`${DOCKER_IMAGE}:sha-${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
