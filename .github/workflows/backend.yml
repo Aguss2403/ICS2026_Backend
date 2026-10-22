@@ -120,4 +120,3 @@ jobs:
             echo "- \`${DOCKER_IMAGE}:latest\`"
             echo "- \`${DOCKER_IMAGE}:sha-${GITHUB_SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
