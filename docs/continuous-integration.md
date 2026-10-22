@@ -39,4 +39,3 @@ En un pull request, abrí la sección **Checks** y seleccioná la comprobación 
 Si todos los pasos aparecen como exitosos, la validación terminó correctamente. Si falla, abrí el paso que figura con error para desplegarlo y consultar su registro, donde se muestra el detalle de la comprobación que falló.
 
 La publicación real ocurre después de integrar un cambio en `development` o `main`. El workflow no configura Azure, no despliega la aplicación y no modifica la base de datos.
-
