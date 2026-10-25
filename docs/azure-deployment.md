@@ -9,13 +9,13 @@ La API se ejecuta en un contenedor Linux de Azure App Service y conserva sus dat
 | Grupo | `rg-ics2026-tp3` |
 | Región | Canada Central |
 | Plan | `asp-ics2026-tp3-free`, Linux, F1 Free |
-| Aplicación | `ics2026-backend-matias` |
+| Aplicación | `tp3-ics-haurigot-ibanez-quiroga-salvatore-villanueva` |
 | Registro de imágenes | `docker.io/ulisesquiroga/ics2026-backend` |
 | Puerto interno | 8080 |
 
-- [Swagger público](https://ics2026-backend-matias-f2a6ajdrethrg8ej.canadacentral-01.azurewebsites.net/swagger/index.html)
-- [Salud](https://ics2026-backend-matias-f2a6ajdrethrg8ej.canadacentral-01.azurewebsites.net/healthcheck)
-- [Catálogo](https://ics2026-backend-matias-f2a6ajdrethrg8ej.canadacentral-01.azurewebsites.net/api/products)
+- [Swagger público](https://tp3-ics-haurigot-ibanez-quiroga-salvatore-villanueva.azurewebsites.net/swagger/index.html)
+- [Salud](https://tp3-ics-haurigot-ibanez-quiroga-salvatore-villanueva.azurewebsites.net/healthcheck)
+- [Catálogo](https://tp3-ics-haurigot-ibanez-quiroga-salvatore-villanueva.azurewebsites.net/api/products)
 
 La aplicación exige HTTPS. El plan gratuito no mantiene la aplicación activa permanentemente; el arranque puede demorar tras un período de inactividad. La base también puede pausarse según su configuración gratuita. No cambiar de nivel ni habilitar excedentes para resolver estas pausas.
 
@@ -46,7 +46,7 @@ La identidad administrada `ics2026-backend-github-deploy` tiene el rol `Website 
 - Sujeto: `repo:Aguss2403/ICS2026_Backend:ref:refs/heads/main`.
 - Audiencia: `api://AzureADTokenExchange`.
 
-No utiliza contraseña de despliegue ni perfil de publicación. En GitHub, configurar los identificadores como secretos `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` y `AZURE_SUBSCRIPTION_ID`. Configurar las variables `AZURE_WEBAPP_NAME=ics2026-backend-matias` y `AZURE_RESOURCE_GROUP=rg-ics2026-tp3`. Se conserva la configuración de Docker Hub existente.
+No utiliza contraseña de despliegue ni perfil de publicación. En GitHub, configurar los identificadores como secretos `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` y `AZURE_SUBSCRIPTION_ID`. Configurar las variables `AZURE_WEBAPP_NAME=tp3-ics-haurigot-ibanez-quiroga-salvatore-villanueva` y `AZURE_RESOURCE_GROUP=rg-ics2026-tp3`. Se conserva la configuración de Docker Hub existente.
 
 ## Publicar una versión estable
 
@@ -63,6 +63,8 @@ Para recuperar una versión anterior, utilizar la etiqueta SHA verificada de esa
 ## Verificación inicial
 
 El 25 de octubre de 2026 se desplegó inicialmente la imagen `ulisesquiroga/ics2026-backend:sha-eb41f0f56b815fddb1d98d0b0ceef64db1863296`, publicada previamente por Actions. Se verificaron salud, Swagger, login de administrador, creación y lectura de un producto en Azure SQL, y rechazo de creación anónima. El producto continuó disponible después de reiniciar la aplicación y retirar el acceso SQL temporal del equipo de preparación.
+
+Ese mismo día se trasladó el alojamiento al nombre del equipo indicado en esta guía, dentro del mismo plan gratuito y conservando SQL y la imagen. Se repitieron las comprobaciones de salud, Swagger, login, permisos y catálogo en la nueva URL. Se actualizó el destino de GitHub y se trasladó el permiso de despliegue a la nueva aplicación; la aplicación anterior quedó detenida.
 
 Esta comprobación confirma el alojamiento y la conexión. La primera ejecución completa del nuevo job de despliegue queda pendiente de la revisión e integración de los cambios hasta `main`; debe comprobarse allí antes de dar por validada la entrega automática.
 
