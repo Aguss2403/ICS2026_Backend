@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security.Authentication;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Dsw2025Tpi.Api.Middlewares
 {
@@ -16,6 +17,11 @@ namespace Dsw2025Tpi.Api.Middlewares
             _logger = logger;
         }
 
+        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
         public async Task Invoke(HttpContext context)
         {
             try
@@ -24,43 +30,41 @@ namespace Dsw2025Tpi.Api.Middlewares
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Exception occurred: {ExceptionType}", e.GetType().Name);
+                // Once the body has started, the status code can no longer be changed.
+                if (context.Response.HasStarted) throw;
                 await HandleExceptionAsync(context, e);
             }
         }
 
-        private Task HandleExceptionAsync(HttpContext context, Exception e)
+        private async Task HandleExceptionAsync(HttpContext context, Exception e)
         {
-            context.Response.ContentType = "application/json";
-
-            var statusCode = e switch
+            // Order matters: specific application exceptions before their ApplicationException base.
+            var (statusCode, message) = e switch
             {
-                    Dsw2025Tpi.Application.Exceptions.ApplicationException _ => HttpStatusCode.BadRequest,
-                InvalidCredentialsException _ => HttpStatusCode.BadRequest,
-                InvalidCredentialException _ => HttpStatusCode.Unauthorized,
-                _ => HttpStatusCode.InternalServerError
+                EntityNotFoundException => (HttpStatusCode.NotFound, e.Message),
+                DuplicatedEntityException => (HttpStatusCode.Conflict, e.Message),
+                Dsw2025Tpi.Application.Exceptions.ApplicationException => (HttpStatusCode.BadRequest, e.Message),
+                InvalidCredentialsException => (HttpStatusCode.BadRequest, "Invalid username or password."),
+                InvalidCredentialException => (HttpStatusCode.Unauthorized, "Unauthorized access."),
+                // Unexpected errors never expose internal details to the client.
+                _ => (HttpStatusCode.InternalServerError, "Ocurrió un error interno en el servidor.")
             };
 
+            if (statusCode == HttpStatusCode.InternalServerError)
+                _logger.LogError(e, "Unhandled exception: {ExceptionType}", e.GetType().Name);
+            else
+                _logger.LogWarning("Request rejected with {StatusCode}: {ExceptionType}", (int)statusCode, e.GetType().Name);
+
+            var response = new ErrorResponse(
+                (int)statusCode,
+                message,
+                (e as EntityValidationException)?.Errors);
+
+            context.Response.Clear();
             context.Response.StatusCode = (int)statusCode;
-
-            var message = e switch
-            {
-                Dsw2025Tpi.Application.Exceptions.ApplicationException _ => e.Message,
-                InvalidCredentialsException _ => "Invalid username or password.",
-                InvalidCredentialException _ => "Unauthorized access.",
-                _ => "Internal server error."
-            };
-
-            var response = new
-            {
-                StatusCode = context.Response.StatusCode,
-                Message = message,
-                Detail = e.Message
-            };
-
-            var jsonResponse = JsonSerializer.Serialize(response);
-
-            return context.Response.WriteAsync(jsonResponse);
+            await context.Response.WriteAsJsonAsync(response, JsonOptions);
         }
+
+        private sealed record ErrorResponse(int StatusCode, string Message, IReadOnlyList<string>? Errors);
     }
 }

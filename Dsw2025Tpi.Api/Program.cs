@@ -1,3 +1,4 @@
+using Dsw2025Tpi.Api.Middlewares;
 using Dsw2025Tpi.Api.Utils;
 using Dsw2025Tpi.Application.Interfaces; // <-- Agregado
 using Dsw2025Tpi.Application.Services;   // <-- Agregado
@@ -92,6 +93,9 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
+        // First, so that exceptions from any later middleware or endpoint become JSON error responses.
+        app.UseMiddleware<ExceptionHandler>();
+
         app.UseSwagger();
         app.UseSwaggerUI();
 
