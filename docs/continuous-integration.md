@@ -2,7 +2,7 @@
 
 El workflow [Backend CI](../.github/workflows/backend.yml) valida el backend automáticamente en pull requests cuyo destino sea `development` o `main`, y ante pushes a esas ramas. También puede iniciarse manualmente desde la pestaña Actions mediante `workflow_dispatch`.
 
-El único job, `validate`, corre en un runner Ubuntu nuevo y realiza estas comprobaciones:
+El job `validate` corre en un runner Ubuntu nuevo y realiza estas comprobaciones:
 
 1. Descarga el código y configura el SDK .NET 8.
 2. Restaura los paquetes de la solución.
@@ -13,7 +13,7 @@ El único job, `validate`, corre en un runner Ubuntu nuevo y realiza estas compr
 
 Las pruebas de seeding usan SQLite en memoria por defecto. Como el workflow no configura `ICS_TEST_SQL_CONNECTION`, no necesita SQL Server ni accede a una base personal. Las variables sintéticas cumplen la documentación de [inicialización y pruebas](admin-seed.md): la contraseña tiene menos de 90 caracteres y la clave JWT supera el mínimo de 32 bytes.
 
-El workflow tiene permisos de solo lectura sobre el contenido del repositorio. Cualquier error en restauración, compilación, pruebas o construcción Docker hace fallar `validate`. Los valores sintéticos duran solo durante la ejecución del job y no se guardan como secretos del repositorio.
+Los jobs `validate` y `publish` tienen permisos de solo lectura sobre el contenido del repositorio. Cualquier error en restauración, compilación, pruebas o construcción Docker hace fallar `validate`. Los valores sintéticos duran solo durante la ejecución del job y no se guardan como secretos del repositorio.
 
 ## Publicación en Docker Hub
 
@@ -38,4 +38,12 @@ En un pull request, abrí la sección **Checks** y seleccioná la comprobación 
 
 Si todos los pasos aparecen como exitosos, la validación terminó correctamente. Si falla, abrí el paso que figura con error para desplegarlo y consultar su registro, donde se muestra el detalle de la comprobación que falló.
 
-La publicación real ocurre después de integrar un cambio en `development` o `main`. El workflow no configura Azure, no despliega la aplicación y no modifica la base de datos.
+La publicación real ocurre después de integrar un cambio en `development` o `main`.
+
+## Despliegue en Azure
+
+El job `deploy` espera a `validate` y `publish` y se ejecuta únicamente ante un `push` a `main`. Despliega la etiqueta `sha-${{ github.sha }}` que acaba de publicar el mismo workflow y comprueba `/healthcheck` y el catálogo público con al menos un producto. No vuelve a construir la imagen ni aplica migraciones.
+
+Solo este job recibe `id-token: write`, necesario para autenticarse en Azure mediante OIDC. La identidad federada acepta únicamente este repositorio y la rama `main`, y tiene permisos limitados a la aplicación. Los despliegues se serializan mediante el grupo de concurrencia `azure-production`.
+
+En PR, `development` y ejecuciones manuales se omite el despliegue. La infraestructura, los secretos de ejecución y la base deben estar preparados previamente. Ver [configuración y operación del despliegue](azure-deployment.md) y [preparación de Azure SQL](azure-sql.md).

@@ -44,6 +44,10 @@ El login rechaza de forma controlada a un usuario cuyo rol no esté disponible, 
 
 La compilación y las pruebas automáticas del backend están explicadas en la [guía de integración continua](docs/continuous-integration.md).
 
+## Despliegue en Azure
+
+La API se aloja como contenedor en Azure App Service y utiliza Azure SQL Database. La [guía de despliegue](docs/azure-deployment.md) describe la URL pública, la configuración externa y el despliegue automático desde `main`. La preparación de la base y los reintentos ante errores transitorios están documentados en [Azure SQL](docs/azure-sql.md).
+
 ## Estrategia de ramas
 
 - `main` contiene la versión estable de la API.
