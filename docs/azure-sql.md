@@ -51,6 +51,8 @@ No aplicar migraciones hacia atrás, borrar la base ni usar `EnsureDeleted` para
 - Confirmar que los permisos de las operaciones protegidas se conservan.
 - Registrar el commit, la versión de imagen, la URL, los estados HTTP y el resultado, sin incluir contraseñas, tokens ni la conexión completa.
 
-La comprobación inicial devolvió `200` en salud, Swagger, login y catálogo; `201` al crear el producto sintético `TP3-AZURE-CHECK`; y `401` al intentar crearlo sin autenticación. Se utilizó la imagen del commit `eb41f0f56b815fddb1d98d0b0ceef64db1863296`. Esta imagen inicial precede al cambio de reintentos; la imagen que lo incorpora se publicará al integrar esta PR.
+La comprobación inicial devolvió `200` en salud, Swagger, login y catálogo; `201` al crear el producto sintético `TP3-AZURE-CHECK`; y `401` al intentar crearlo sin autenticación. Se utilizó la imagen del commit `eb41f0f56b815fddb1d98d0b0ceef64db1863296`.
+
+La verificación final utilizó la imagen de `main` del commit `cc5990fac9257530da87c3fec1e4f5c958fe3815`, que ya incluye reintentos SQL y manejo de errores de productos. Su publicación y despliegue automáticos terminaron correctamente y las 28 solicitudes de productos sobre la URL pública coincidieron con los estados HTTP esperados. Ver [evidencia del despliegue](azure-deployment.md#verificación-del-despliegue-automático).
 
 Referencia: [oferta gratuita de Azure SQL Database](https://learn.microsoft.com/azure/azure-sql/database/free-tier).
