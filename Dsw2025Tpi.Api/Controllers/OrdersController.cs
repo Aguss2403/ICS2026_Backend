@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Dsw2025Tpi.Application.Dtos;
-using Dsw2025Ej15.Application.Exceptions;
+using Dsw2025Tpi.Application.Exceptions;
 using Dsw2025Tpi.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 
