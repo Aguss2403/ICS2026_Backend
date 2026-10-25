@@ -1,5 +1,5 @@
 ﻿using Azure.Core;
-using Dsw2025Ej15.Application.Exceptions;
+using Dsw2025Tpi.Application.Exceptions;
 using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Application.Interfaces;
 using Dsw2025Tpi.Domain.Entities;
@@ -22,20 +22,37 @@ public class ProductsManagementService : IProductsManagementService
         _repository = repository;
 
     }
-    public void ValidateRequest(ProductRequest request)
+    // Same limits as the Products table (Dsw2025TpiContext), so invalid data never reaches the database.
+    public const int SkuMaxLength = 20;
+    public const int NameMaxLength = 50;
+    public const int InternalCodeMaxLength = 30;
+    public const int DescriptionMaxLength = 250;
+
+    public void ValidateRequest(ProductRequest? request)
     {
+        if (request is null)
+            throw new EntityValidationException(new[] { "Los datos del producto son obligatorios." });
+
         var errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(request.Sku))
-            errors.Add("El SKU no puede estar vacío.");
+            errors.Add("El SKU es obligatorio.");
+        else if (request.Sku.Length > SkuMaxLength)
+            errors.Add($"El SKU no puede superar los {SkuMaxLength} caracteres.");
         if (string.IsNullOrWhiteSpace(request.Name))
-            errors.Add("El nombre no puede estar vacío.");
+            errors.Add("El nombre es obligatorio.");
+        else if (request.Name.Length > NameMaxLength)
+            errors.Add($"El nombre no puede superar los {NameMaxLength} caracteres.");
+        if (request.InternalCode?.Length > InternalCodeMaxLength)
+            errors.Add($"El código interno no puede superar los {InternalCodeMaxLength} caracteres.");
+        if (request.Description?.Length > DescriptionMaxLength)
+            errors.Add($"La descripción no puede superar los {DescriptionMaxLength} caracteres.");
         if (request.CurrentUnitPrice <= 0)
             errors.Add("El precio unitario debe ser mayor a 0.");
         if (request.StockQuantity < 0)
             errors.Add("La cantidad en stock no puede ser negativa.");
-        if (errors.Any())
-            throw new ArgumentException(string.Join(" | ", errors));
+        if (errors.Count > 0)
+            throw new EntityValidationException(errors);
     }
 
     private ProductModel.ProductResponse MapToResponse(Product product)
@@ -70,15 +87,16 @@ public class ProductsManagementService : IProductsManagementService
 
     public async Task<ProductModel.ResponsePagination?> GetProducts(ProductModel.FilterProduct? request=null)
     {
-        var isActive = request.Status == "enabled" ? (bool?) true :
-                       request.Status == "disabled" ? (bool?) false : null;
+        var isActive = request?.Status == "enabled" ? (bool?) true :
+                       request?.Status == "disabled" ? (bool?) false : null;
+        var search = request?.Search;
         var activeProducts = await _repository.GetFiltered<Product>(p => 
             (isActive == null || p.IsActive == isActive)
-            &&(string.IsNullOrEmpty(request.Search) || p.Name.Contains(request.Search))
+            &&(string.IsNullOrEmpty(search) || p.Name.Contains(search))
             );
 
         if (activeProducts is null || !activeProducts.Any())
-            throw new EntityNotFoundException("No hay productos cargados");
+            return new ProductModel.ResponsePagination(new List<ProductModel.ProductResponse>(), 0);
 
         var products = activeProducts
             .Select(p => new ProductModel.ProductResponse(
@@ -107,9 +125,9 @@ public class ProductsManagementService : IProductsManagementService
             throw new DuplicatedEntityException($"Ya existe un producto con el Sku {request.Sku}");
 
         var product = new Product(request.Sku,
-            request.InternalCode,
+            request.InternalCode ?? string.Empty,
             request.Name,
-            request.Description,
+            request.Description ?? string.Empty,
             request.CurrentUnitPrice,
             request.StockQuantity);
 
@@ -134,9 +152,9 @@ public class ProductsManagementService : IProductsManagementService
         }
 
         product.Sku = request.Sku;
-        product.InternalCode = request.InternalCode;
+        product.InternalCode = request.InternalCode ?? string.Empty;
         product.Name = request.Name;
-        product.Description = request.Description;
+        product.Description = request.Description ?? string.Empty;
         product.CurrentUnitPrice = request.CurrentUnitPrice;
         product.StockQuantity = request.StockQuantity;
 

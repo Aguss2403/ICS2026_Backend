@@ -1,0 +1,205 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - development
+      - main
+  push:
+    branches:
+      - development
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_IMAGE: ${{ vars.DOCKER_IMAGE }}
+
+jobs:
+  validate:
+    name: Validate backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore Dsw2025Tpi.sln
+
+      - name: Build Release (warnings are errors)
+        run: dotnet build Dsw2025Tpi.sln --configuration Release --no-restore --warnaserror
+
+      - name: Build container image
+        run: docker build --file Dockerfile --tag ics2026-backend:ci .
+
+      - name: Generate ephemeral test credentials
+        id: test-credentials
+        shell: bash
+        run: |
+          admin_password="Ci-$(openssl rand -hex 24)"
+          jwt_key="$(openssl rand -hex 32)"
+          printf '::add-mask::%s\n' "$admin_password"
+          printf '::add-mask::%s\n' "$jwt_key"
+          {
+            printf 'admin_password=%s\n' "$admin_password"
+            printf 'jwt_key=%s\n' "$jwt_key"
+          } >> "$GITHUB_OUTPUT"
+          unset admin_password jwt_key
+
+      - name: Run complete test suite
+        env:
+          ICS_TEST_ADMIN_PASSWORD: ${{ steps.test-credentials.outputs.admin_password }}
+          ICS_TEST_JWT_KEY: ${{ steps.test-credentials.outputs.jwt_key }}
+        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore
+
+  publish:
+    name: Publish backend image
+    needs: validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify Docker Hub configuration
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [[ -z "$DOCKER_IMAGE" ]]; then
+            echo '::error::The DOCKER_IMAGE repository variable is not configured.'
+            exit 1
+          fi
+          if [[ "$DOCKER_IMAGE" != 'ulisesquiroga/ics2026-backend' ]]; then
+            echo '::error::DOCKER_IMAGE must be ulisesquiroga/ics2026-backend.'
+            exit 1
+          fi
+          if [[ -z "$DOCKERHUB_USERNAME" || -z "$DOCKERHUB_TOKEN" ]]; then
+            echo '::error::DOCKERHUB_USERNAME and DOCKERHUB_TOKEN must be configured as repository secrets.'
+            exit 1
+          fi
+          echo 'Docker Hub variable and secrets are available.'
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and publish validated commit
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
+
+      - name: Add image references to the workflow summary
+        shell: bash
+        run: |
+          {
+            echo '## Docker Hub publication'
+            echo
+            echo "Validated commit: \`${GITHUB_SHA}\`"
+            echo
+            echo 'Published tags:'
+            echo "- \`${DOCKER_IMAGE}:latest\`"
+            echo "- \`${DOCKER_IMAGE}:sha-${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy backend to Azure
+    needs: [validate, publish]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: azure-production
+      cancel-in-progress: false
+    env:
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+
+    steps:
+      - name: Verify deployment configuration
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          for name in AZURE_WEBAPP_NAME AZURE_RESOURCE_GROUP AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::The GitHub setting $name is not configured."
+              exit 1
+            fi
+          done
+
+      - name: Log in to Azure with OpenID Connect
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy the published commit image
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
+          images: ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
+
+      - name: Verify the public API and SQL access
+        shell: bash
+        env:
+          APP_URL: ${{ steps.deploy.outputs.webapp-url }}
+        run: |
+          base_url="${APP_URL%/}"
+          if [[ "$base_url" != https://* ]]; then
+            echo '::error::Azure did not return an HTTPS application URL.'
+            exit 1
+          fi
+          curl --fail --silent --show-error --location --retry 12 --retry-all-errors \
+            --retry-delay 10 --max-time 60 "$base_url/healthcheck" --output /dev/null
+          products_file="$RUNNER_TEMP/azure-products-$GITHUB_RUN_ID.json"
+          curl --fail --silent --show-error --location --retry 12 --retry-all-errors \
+            --retry-delay 10 --max-time 60 "$base_url/api/products" --output "$products_file"
+          python3 - "$products_file" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as response:
+              catalog = json.load(response)
+          if (not isinstance(catalog, dict)
+                  or not isinstance(catalog.get("items"), list)
+                  or not catalog["items"]
+                  or not isinstance(catalog.get("total"), int)
+                  or catalog["total"] < 1):
+              raise SystemExit("The public catalog must contain at least one product.")
+          print("Public API and SQL-backed catalog verification passed.")
+          PY
+          {
+            echo '## Azure deployment'
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+            echo "Image: \`$DOCKER_IMAGE:sha-$GITHUB_SHA\`"
+            echo "URL: $base_url"
+            echo 'Health and catalog checks passed.'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -22,7 +22,7 @@ public class Customer : EntityBase
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
-    public string PhoneNumber { get; set; }
+    public string PhoneNumber { get; set; } = string.Empty;
     public Guid UserId { get; set; }
     public User? User { get; set; }
 }

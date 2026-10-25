@@ -2,13 +2,25 @@
 
 public class OrderItem : EntityBase
 {
+    private Product? _product;
+    private Order? _order;
+
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal SubTotal { get; set; }
     public Guid ProductId { get; set; }
-    public Product Product { get; set; }
+    // Required relationships may not be loaded when EF materializes the entity.
+    public Product Product
+    {
+        get => _product ?? throw new InvalidOperationException("La relación Product no está cargada.");
+        set => _product = value;
+    }
     public Guid OrderId { get; set; }
-    public Order Order { get; set; }
+    public Order Order
+    {
+        get => _order ?? throw new InvalidOperationException("La relación Order no está cargada.");
+        set => _order = value;
+    }
 
     public OrderItem() { }
 
@@ -22,6 +34,7 @@ public class OrderItem : EntityBase
         Quantity = quantity;
         UnitPrice = product.CurrentUnitPrice;
         SubTotal = CalculateSubTotal();
+        Order = order;
         OrderId = Order.Id;
     }
 
