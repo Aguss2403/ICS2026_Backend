@@ -103,4 +103,44 @@ public class RuntimeConfigurationTests
         var context = scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>();
         Assert.Equal(values["ConnectionStrings:DefaultConnection"], context.Database.GetConnectionString());
     }
+
+    [Fact]
+    public void SqlOperationsRecoverAfterATransientTimeout()
+    {
+        var services = new ServiceCollection().AddDomainServices(Build(ValidValues()));
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>();
+        var attempts = 0;
+
+        var result = context.Database.CreateExecutionStrategy().Execute(() =>
+        {
+            attempts++;
+            if (attempts == 1)
+                throw new TimeoutException("Synthetic transient database timeout.");
+            return "recovered";
+        });
+
+        Assert.Equal("recovered", result);
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public void SqlOperationsDoNotRetryANonTransientFailure()
+    {
+        var services = new ServiceCollection().AddDomainServices(Build(ValidValues()));
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>();
+        var attempts = 0;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            context.Database.CreateExecutionStrategy().Execute(() =>
+            {
+                attempts++;
+                throw new InvalidOperationException("Synthetic non-transient failure.");
+            }));
+
+        Assert.Equal(1, attempts);
+    }
 }
