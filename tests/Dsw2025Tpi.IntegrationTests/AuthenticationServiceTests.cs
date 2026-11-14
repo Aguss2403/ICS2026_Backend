@@ -13,7 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
-namespace Dsw2025Tpi.Api.Tests;
+namespace Dsw2025Tpi.IntegrationTests;
 
 public class AuthenticationServiceTests
 {

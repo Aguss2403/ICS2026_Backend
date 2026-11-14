@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace Dsw2025Tpi.Orders.Tests;
+namespace Dsw2025Tpi.IntegrationTests;
 
 public class OrderPersistenceTests
 {
@@ -33,7 +33,7 @@ public class OrderPersistenceTests
         var user = new User("initializer-user", "initializer@example.invalid", "synthetic-test-value", role);
         var customer = new Customer(user, "Test", "Customer", "Shipping", "123456");
         context.Customers.Add(customer);
-        var product = OrderItemTests.ProductWithStock();
+        var product = TestData.Product();
         var item = new OrderItem
         {
             Product = product,
@@ -74,7 +74,7 @@ public class OrderPersistenceTests
         var customer = new Customer(user, "Test", "Customer", "Shipping", "123456");
         var items = new List<OrderItem>();
         var order = new Order("Shipping", "Billing", notes, items, customer.Id) { Customer = customer };
-        var product = OrderItemTests.ProductWithStock();
+        var product = TestData.Product();
         var item = new OrderItem(3, product, order);
         items.Add(item);
         context.Orders.Add(order);

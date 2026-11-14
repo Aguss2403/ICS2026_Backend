@@ -3,13 +3,12 @@ using Dsw2025Tpi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace Dsw2025Tpi.Seeding.Tests;
+namespace Dsw2025Tpi.IntegrationTests;
 
 public class DataSeederTests
 {
-    // Test passwords come from the process environment, never from source-controlled defaults.
-    internal static string Password => Environment.GetEnvironmentVariable("ICS_TEST_ADMIN_PASSWORD")
-        ?? throw new InvalidOperationException("Set ICS_TEST_ADMIN_PASSWORD to a synthetic test password.");
+    // An optional CI override; local runs generate a synthetic password for this process.
+    internal static string Password => TestCredentials.Password;
 
     internal static SeedAdminOptions Enabled(string? username = "seed-test-admin",
         string? email = "seed-test-admin@example.invalid", string? password = null) => new()

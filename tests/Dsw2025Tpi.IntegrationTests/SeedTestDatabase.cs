@@ -2,7 +2,7 @@ using Dsw2025Tpi.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dsw2025Tpi.Seeding.Tests;
+namespace Dsw2025Tpi.IntegrationTests;
 
 internal sealed class SeedTestDatabase : IDisposable
 {

@@ -82,26 +82,12 @@ Esto no deshabilita ni cambia la cuenta ya creada. En otro proceso puede hacerse
 
 ## Pruebas acotadas
 
-Cargar externamente `ICS_TEST_ADMIN_PASSWORD` (contraseña sintética de menos de 90 caracteres, para permitir la prueba de cambio sin superar el esquema) y `ICS_TEST_JWT_KEY` (clave sintética de al menos 32 bytes).
+La suite genera credenciales sintéticas en memoria y utiliza SQLite. No requiere variables de entorno, SQL Server ni Docker Compose:
 
 ```bash
-: "${ICS_TEST_ADMIN_PASSWORD:?Cargar una contraseña sintética de prueba}"
-: "${ICS_TEST_JWT_KEY:?Cargar una clave JWT sintética de prueba}"
-dotnet test tests/Dsw2025Tpi.Seeding.Tests \
-  --logger 'trx;LogFileName=seed-tests.trx'
+dotnet test tests/Dsw2025Tpi.IntegrationTests --configuration Release --filter FullyQualifiedName~ApiSeedTests
 ```
 
-La ejecución predeterminada usa SQLite en memoria: verifica un proveedor relacional real sin acceder a bases existentes. Se prueban ambas rutas del seeder, roles vacíos/parciales/completos, repetición, conservación de identificadores/contraseña/rol, administrador deshabilitado, campos faltantes/inválidos, conflictos de identidad/rol y duplicación del correo. Se comprueba además la configuración real de EF, el uso exclusivo de DefaultConnection y el recorrido HTTP de login + alta autorizada de producto (`200`, `401` sin token, `201` con token).
+`ApiSeedTests` conserva la comprobación de ambos callbacks EF de inicialización, login y autorización HTTP. Los casos de `DataSeederTests` y `SeedRegistrationTests` también están en ese proyecto. La variante HTTP opcional que migraba SQL Server se retiró al unificar la infraestructura del TP4; las migraciones SQL no se aplican sobre SQLite.
 
-Para ejecutar la comprobación HTTP sobre el **esquema migrado de SQL Server**, cargar `ICS_TEST_SQL_CONNECTION` con una conexión externa a una instancia local Docker y un usuario con permiso para crear una base de prueba. La prueba reemplaza siempre el nombre de base por `ICSSeedTests_<GUID>`; nunca migra ni borra la base nombrada en la conexión suministrada:
-
-```bash
-: "${ICS_TEST_SQL_CONNECTION:?Cargar conexión sintética a SQL Server}"
-dotnet test tests/Dsw2025Tpi.Seeding.Tests \
-  --filter FullyQualifiedName~ApiSeedTests \
-  --logger 'trx;LogFileName=seed-sqlserver.trx'
-```
-
-Esta variante aplica la migración existente, repite con `MigrateAsync` y verifica login, JWT de rol admin, producto persistido y ausencia de Customer. Deja la base de prueba creada para inspección; no elimina bases ni volúmenes. Los demás casos continúan verificándose con SQLite en la suite predeterminada.
-
-Ver [resultados de la ejecución realizada](admin-seed-verification.md) para consultar las comprobaciones de integración con SQLite y SQL Server.
+Ver [infraestructura de pruebas TP4](tp4-testing.md).
