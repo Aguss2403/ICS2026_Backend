@@ -1,5 +1,7 @@
 # Verificación de autenticación con rol
 
+> Registro histórico: desde TP4 los proyectos y comandos vigentes están en [tp4-testing.md](tp4-testing.md). La suite actual usa SQLite y no ofrece la variante HTTP con SQL Server.
+
 Fecha: 19 de octubre de 2026. Rama: `feature/validar-rol-autenticacion`, creada desde `origin/development` actualizado en `14255e2d15ca2d23b5b3977c0e26589f75b986dc` (incluye el seed de la PR #3).
 
 Entorno: Linux x64, SDK .NET 8.0.426, runtime 8.0.32, EF Core 9.0.6, configuración Release. Las variables de la suite de seed se generaron como valores sintéticos en memoria, sin usar credenciales personales ni conexión a SQL Server.

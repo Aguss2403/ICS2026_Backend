@@ -11,8 +11,17 @@
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
       <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj" />
+    <ProjectReference Include="../../Dsw2025Tpi.Application/Dsw2025Tpi.Application.csproj" />
+    <ProjectReference Include="../../Dsw2025Tpi.Domain/Dsw2025Tpi.Domain.csproj" />
     <ProjectReference Include="../../Dsw2025Tpi.Data/Dsw2025Tpi.Data.csproj" />
   </ItemGroup>
 </Project>

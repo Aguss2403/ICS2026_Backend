@@ -40,25 +40,19 @@ jobs:
       - name: Build container image
         run: docker build --file Dockerfile --tag ics2026-backend:ci .
 
-      - name: Generate ephemeral test credentials
-        id: test-credentials
-        shell: bash
-        run: |
-          admin_password="Ci-$(openssl rand -hex 24)"
-          jwt_key="$(openssl rand -hex 32)"
-          printf '::add-mask::%s\n' "$admin_password"
-          printf '::add-mask::%s\n' "$jwt_key"
-          {
-            printf 'admin_password=%s\n' "$admin_password"
-            printf 'jwt_key=%s\n' "$jwt_key"
-          } >> "$GITHUB_OUTPUT"
-          unset admin_password jwt_key
+      - name: Run complete test suite (first pass)
+        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/first
 
-      - name: Run complete test suite
-        env:
-          ICS_TEST_ADMIN_PASSWORD: ${{ steps.test-credentials.outputs.admin_password }}
-          ICS_TEST_JWT_KEY: ${{ steps.test-credentials.outputs.jwt_key }}
-        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore
+      - name: Run complete test suite again (check isolation)
+        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/second
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
 
   publish:
     name: Publish backend image

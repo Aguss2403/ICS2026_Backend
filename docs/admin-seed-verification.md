@@ -1,5 +1,7 @@
 # Verificación de la inicialización
 
+> Registro histórico: desde TP4 los proyectos y comandos vigentes están en [tp4-testing.md](tp4-testing.md). La suite actual usa SQLite y no ofrece la variante HTTP con SQL Server.
+
 Verificación de integración realizada el 8 de octubre de 2026 con SDK .NET 8.0.425, EF Core 9.0.6 y SQL Server local en Docker. Las credenciales sintéticas se suministraron mediante variables de entorno y no se incluyen en este informe.
 
 | Comprobación | Resultado |

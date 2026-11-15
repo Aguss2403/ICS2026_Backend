@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace Dsw2025Tpi.Api.Tests;
+namespace Dsw2025Tpi.UnitTests;
 
 public class ExceptionHandlerTests
 {

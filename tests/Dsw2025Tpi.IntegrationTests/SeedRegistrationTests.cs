@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Dsw2025Tpi.Seeding.Tests;
+namespace Dsw2025Tpi.IntegrationTests;
 
 public class SeedRegistrationTests
 {

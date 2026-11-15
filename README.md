@@ -131,6 +131,18 @@ Para comprobar los flujos HTTP, permisos básicos y persistencia de la API docke
 dotnet test Dsw2025Tpi.sln --configuration Release
 ```
 
-El proyecto `Dsw2025Tpi.Api.Tests` verifica configuración completa, valores obligatorios ausentes, clave corta, expiración inválida, conexión SQL mal formada, ausencia de secretos en los errores y uso exclusivo de `DefaultConnection`. Estas pruebas no requieren SQL real y no reemplazan la suite de negocio del TP1.
+El proyecto `tests/Dsw2025Tpi.UnitTests` verifica configuración completa, valores obligatorios ausentes, clave corta, expiración inválida, conexión SQL mal formada, ausencia de secretos en los errores y uso exclusivo de `DefaultConnection`. Estas pruebas no requieren SQL real y no reemplazan la suite de negocio del TP1.
 
 Referencias técnicas: [configuración por entorno](https://learn.microsoft.com/aspnet/core/fundamentals/configuration/?view=aspnetcore-8.0) y [contenedores ASP.NET Core](https://learn.microsoft.com/aspnet/core/host-and-deploy/docker/building-net-docker-images?view=aspnetcore-8.0).
+
+## Pruebas TP4
+
+La solución contiene `tests/Dsw2025Tpi.UnitTests` (xUnit, FluentAssertions y Moq) y
+`tests/Dsw2025Tpi.IntegrationTests` (HTTP y persistencia con SQLite en memoria).
+
+```bash
+dotnet test Dsw2025Tpi.sln --configuration Release
+```
+
+No hace falta configurar variables, Azure SQL ni Docker Compose. Las credenciales de prueba
+se generan en memoria. Ver [infraestructura y ejemplos del TP4](docs/tp4-testing.md).

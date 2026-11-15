@@ -1,5 +1,7 @@
 # Verificación del entorno Docker Compose
 
+> Registro histórico: desde TP4 los proyectos y comandos vigentes están en [tp4-testing.md](tp4-testing.md). La suite actual usa SQLite y no ofrece la variante HTTP con SQL Server.
+
 Ejecución realizada el 19 de octubre de 2026 desde un clon nuevo de `feature/docker-setup`, con Docker Engine 28.4.0, Docker Compose 2.39.4, SDK .NET 8.0.426 en el host y dotnet-ef 9.0.6 como herramienta local. DB_PASSWORD, JWT_KEY y las credenciales del administrador opcional fueron valores sintéticos generados localmente en `.env` (excluido de Git y del contexto Docker); no se incluyen en este informe ni se imprimieron durante la ejecución.
 
 | Paso | Comando | Resultado |
