@@ -61,7 +61,7 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetAllProductsAdmin([FromQuery] ProductModel.FilterProduct request)
     {
-        var products = await _service.GetProducts(request);
+        var products = await _service.GetProducts(request, includeInactive: true);
         if (products == null)
         {
             Response.Headers.Append("X-Message", "There are no active products");

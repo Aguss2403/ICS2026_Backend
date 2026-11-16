@@ -227,7 +227,8 @@ public class ProductErrorHandlingTests : IDisposable
         Assert.False((await toggled.Content.ReadFromJsonAsync<ProductModel.ProductResponse>())!.IsActive);
 
         var list = await client.GetFromJsonAsync<ProductModel.ResponsePagination>("/api/products");
-        Assert.Equal(1, list!.Total);
+        Assert.Equal(0, list!.Total);
+        Assert.Empty(list.Items);
     }
 
 }
