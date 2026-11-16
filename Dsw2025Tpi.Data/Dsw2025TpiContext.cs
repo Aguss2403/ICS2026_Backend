@@ -63,7 +63,7 @@ public class Dsw2025TpiContext : DbContext
             eb.Property(p => p.InternalCode).HasMaxLength(30).IsRequired();
             eb.Property(p => p.Description).HasMaxLength(250);
             eb.Property(p => p.CurrentUnitPrice).HasColumnType("decimal(18,2)").IsRequired();
-            eb.Property(p => p.StockQuantity).IsRequired();
+            eb.Property(p => p.StockQuantity).IsRequired().IsConcurrencyToken();
             eb.Property(p => p.IsActive).IsRequired();
         });
         modelBuilder.Entity<Order>(eb =>

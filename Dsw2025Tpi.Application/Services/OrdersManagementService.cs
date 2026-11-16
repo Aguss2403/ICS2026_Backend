@@ -28,17 +28,20 @@ public class OrdersManagementService : IOrdersManagementService
             throw new EntityNotFoundException($"No se encontró el cliente con ID {request.CustomerId}");
 
         var orderItems = new List<OrderItem>();
+        var remainingStock = new Dictionary<Guid, int>();
         foreach (var item in request.OrderItems)
         {
+            if (item.Quantity <= 0)
+                throw new EntityValidationException(["La cantidad debe ser mayor que cero."]);
+
             var product = await _repository.GetById<Product>(item.ProductId);
             if (product == null)
                 throw new EntityNotFoundException($"No se encontró el producto con ID {item.ProductId}");
 
-            if (!product.HasSufficientStock(item.Quantity))
-                throw new InvalidOperationException($"Stock insuficiente para el producto {product.Name}.");
-            product.DecreaseStock(item.Quantity);
-            
-            await _repository.Update(product);
+            var available = remainingStock.GetValueOrDefault(product.Id, product.StockQuantity);
+            if (item.Quantity > available)
+                throw new EntityValidationException([$"Stock insuficiente para el producto {product.Name}."]);
+            remainingStock[product.Id] = available - item.Quantity;
 
             var orderItem = new OrderItem
             {
@@ -57,8 +60,12 @@ public class OrdersManagementService : IOrdersManagementService
             request.Notes,
             orderItems,
             request.CustomerId
-        );
+        ) { Customer = customer };
 
+        foreach (var item in orderItems)
+            item.Product.DecreaseStock(item.Quantity);
+
+        // The repository saves the tracked inventory changes with the new order.
         await _repository.Add(order);
 
         var response = new OrderModel.OrderResponse(
