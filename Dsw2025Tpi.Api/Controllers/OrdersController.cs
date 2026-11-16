@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Dsw2025Tpi.Application.Dtos;
-using Dsw2025Tpi.Application.Exceptions;
 using Dsw2025Tpi.Application.Interfaces;
+using Dsw2025Tpi.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dsw2025Ej15.Api.Controllers;
 
@@ -27,8 +28,19 @@ public class OrdersController : ControllerBase
     [HttpPost]//Endpoint 6
     public async Task<IActionResult> CreateOrder([FromBody] OrderModel.OrderRequest request)
     {
-        var order = await _service.CreateOrder(request);
-        return Created($"/api/orders/{order.Id}", order);
+        try
+        {
+            var order = await _service.CreateOrder(request);
+            return Created($"/api/orders/{order.Id}", order);
+        }
+        catch (DbUpdateConcurrencyException exception) when (exception.Entries.Any(entry => entry.Entity is Product))
+        {
+            return Conflict(new
+            {
+                statusCode = StatusCodes.Status409Conflict,
+                message = "El stock cambió mientras se creaba la orden. Volvé a intentar."
+            });
+        }
     }
 
     [HttpGet("{id}")]//8

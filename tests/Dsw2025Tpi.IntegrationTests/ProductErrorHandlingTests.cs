@@ -71,16 +71,23 @@ public class ProductErrorHandlingTests : IDisposable
         return await scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>().Products.CountAsync();
     }
 
+    // TP4-02 integration scenario 3: the existing row is seeded directly, so the test does not depend on POST succeeding.
     [Fact]
-    public async Task CreatingDuplicateSkuReturnsConflict()
+    public async Task CreatingDuplicateSkuReturnsConflictAndKeepsSingleRow()
     {
-        await Create(Product(sku: "DUP-1"));
+        await factory.SeedAsync(db =>
+        {
+            db.Products.Add(TestData.Product(sku: "DUP-1"));
+            return Task.CompletedTask;
+        });
 
         var message = await AssertError(await client.PostAsJsonAsync("/api/products", Product(sku: "DUP-1", name: "Otro")),
             HttpStatusCode.Conflict);
 
         Assert.Contains("DUP-1", message);
-        Assert.Equal(1, await StoredCount());
+        var rows = await factory.ReadAsync(db => db.Products.AsNoTracking().Where(p => p.Sku == "DUP-1").ToListAsync());
+        var stored = Assert.Single(rows);
+        Assert.Equal("Test product", stored.Name);
     }
 
     [Fact]
@@ -150,9 +157,10 @@ public class ProductErrorHandlingTests : IDisposable
     public async Task ValuesAtTheLimitsAreAccepted()
     {
         var created = await Create(Product(sku: new string('S', 20), internalCode: new string('I', 30),
-            name: new string('N', 50), description: new string('D', 250), price: 0.01m, stock: 0));
+            name: new string('N', 50), description: new string('D', 250), price: 0.01m, stock: 1));
 
-        Assert.Equal(0, created.StockQuantity);
+        // Creation requires positive stock: 1 is the lowest accepted value (zero is only allowed when editing).
+        Assert.Equal(1, created.StockQuantity);
         Assert.NotNull(await Stored(created.Id));
     }
 
