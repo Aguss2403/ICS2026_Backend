@@ -1,49 +1,36 @@
 # Integración continua del backend
 
-El workflow [Backend CI](../.github/workflows/backend.yml) valida el backend automáticamente en pull requests cuyo destino sea `development` o `main`, y ante pushes a esas ramas. También puede iniciarse manualmente desde la pestaña Actions mediante `workflow_dispatch`.
+El workflow [Backend CI](../.github/workflows/backend.yml) se ejecuta automáticamente en pull requests cuyo destino sea \`development\` o \`main\`, y ante pushes a esas ramas. También puede iniciarse manualmente desde la pestaña Actions mediante \`workflow_dispatch\`.
 
-El job `validate` corre en un runner Ubuntu nuevo y realiza estas comprobaciones:
+## Jobs y dependencias
 
-1. Descarga el código y configura el SDK .NET 8.
-2. Restaura los paquetes de la solución.
-3. Compila todos los proyectos en Release con `--warnaserror`; los warnings de compilación hacen fallar el job.
-4. Construye localmente la imagen con el Dockerfile raíz. No inicia sesión ni publica la imagen.
-5. Ejecuta dos veces todos los proyectos de prueba de la solución en Release.
-6. Adjunta los resultados TRX de ambas pasadas como artifact `test-results`.
+El job obligatorio \`tests\` (**Test backend**) obtiene el código, configura el SDK .NET 8, restaura dependencias, compila la solución en Release con \`--warnaserror\` y ejecuta dos veces toda la suite. Cualquier error de restore, compilación o prueba falla este job. Las dos pasadas generan resultados TRX que se adjuntan como artifact \`test-results\`.
 
-Las pruebas de seeding usan SQLite en memoria por defecto. La fábrica HTTP reemplaza SQL Server por SQLite y no necesita una base externa. Las credenciales sintéticas se generan en memoria en la suite, sin configuración externa. La suite se ejecuta dos veces y sus resultados TRX se adjuntan al workflow.
+Durante el job, un paso genera valores aleatorios y sintéticos para \`ICS_TEST_ADMIN_PASSWORD\` e \`ICS_TEST_JWT_KEY\`, los enmascara y los expone solo al entorno del runner. No se guardan como secretos ni se imprimen como credenciales. La infraestructura TP4 usa SQLite en memoria y no requiere SQL Server, Azure SQL, Docker Compose ni credenciales externas.
 
-Los jobs `validate` y `publish` tienen permisos de solo lectura sobre el contenido del repositorio. Cualquier error en restauración, compilación, pruebas o construcción Docker hace fallar `validate`. Los valores sintéticos duran solo durante la ejecución del job y no se guardan como secretos del repositorio.
+El job \`docker-build\` (**Build Docker image**) depende de \`tests\` mediante \`needs: tests\`. Solo si la compilación y todas las pruebas pasan, descarga el mismo commit de la ejecución y construye una imagen local con el Dockerfile raíz. No inicia sesión ni publica.
 
-## Publicación en Docker Hub
+El job \`publish\` depende de \`tests\` y \`docker-build\`; solo corre ante un \`push\` a \`development\` o \`main\`. En pull requests y ejecuciones manuales queda omitido. La publicación usa la variable de repositorio \`DOCKER_IMAGE\`, cuyo valor esperado es \`ulisesquiroga/ics2026-backend\`, y los secretos \`DOCKERHUB_USERNAME\` y \`DOCKERHUB_TOKEN\`. Un paso previo comprueba que estén configurados sin imprimir sus valores.
 
-El job `publish` depende del éxito de `validate` y se ejecuta únicamente en eventos `push` sobre `development` o `main`. En pull requests y ejecuciones manuales se omite por completo, por lo que esos eventos no inician sesión en Docker Hub ni publican imágenes.
+Luego del chequeo, publica el mismo SHA de la ejecución con estas etiquetas:
 
-La publicación usa la variable de repositorio `DOCKER_IMAGE`, cuyo valor esperado es `ulisesquiroga/ics2026-backend`, y los secretos `DOCKERHUB_USERNAME` y `DOCKERHUB_TOKEN`. Un paso previo comprueba que existan sin imprimir sus valores. Si el inicio de sesión falla, el job se detiene en **Log in to Docker Hub** y debe revisarse la vigencia del token, sus permisos y que corresponda al usuario configurado; las credenciales no deben copiarse a los registros ni a comentarios.
+- \`ulisesquiroga/ics2026-backend:latest\`, referencia a la publicación más reciente.
+- \`ulisesquiroga/ics2026-backend:sha-<SHA completo>\`, referencia inmutable al commit validado.
 
-Después de validar el workflow, el job vuelve a descargar exactamente `${{ github.sha }}` y construye una sola imagen desde ese commit. La publica con estas etiquetas:
+El resumen de Actions muestra el SHA validado y ambas referencias. Para descargar una versión concreta sin depender de \`latest\`, usar el SHA completo indicado en el resumen:
 
-- `ulisesquiroga/ics2026-backend:latest`, que identifica la publicación más reciente.
-- `ulisesquiroga/ics2026-backend:sha-<SHA completo>`, que conserva una referencia inmutable al commit validado.
-
-El resumen de la ejecución de Actions muestra el SHA validado y ambas referencias. Para descargar una versión concreta sin depender de `latest`, usar el SHA completo que aparece en ese resumen:
-
-```powershell
+\`\`\`powershell
 docker pull ulisesquiroga/ics2026-backend:sha-<SHA completo del commit>
-```
+\`\`\`
+
+El job \`deploy\` depende de \`tests\`, \`docker-build\` y \`publish\`, y corre únicamente ante un \`push\` a \`main\`. Usa Azure OIDC y despliega la etiqueta \`sha-<SHA de la ejecución>\` que acaba de publicarse. Verifica \`/healthcheck\` y el catálogo público con al menos un producto. No vuelve a construir la imagen ni aplica migraciones.
+
+Solo el job \`deploy\` recibe \`id-token: write\`, necesario para autenticarse en Azure mediante OIDC. La identidad federada debe aceptar únicamente este repositorio y la rama \`main\`, con permisos limitados a la aplicación. Los despliegues se serializan mediante el grupo \`azure-production\`. En PR, \`development\` y ejecuciones manuales el despliegue se omite. La infraestructura, los secretos de ejecución y la base deben estar preparados previamente. Ver [configuración y operación del despliegue](azure-deployment.md) y [preparación de Azure SQL](azure-sql.md).
 
 ## Consultar los resultados
 
-En un pull request, abrí la sección **Checks** y seleccioná la comprobación de **Backend CI** para ver la ejecución. También podés ir a **Actions → Backend CI** y abrir la ejecución correspondiente; allí seleccioná el job **Validate backend**.
+En un pull request, abrí la sección **Checks** y seleccioná **Backend CI** para ver los jobs. También podés ir a **Actions → Backend CI** y abrir la ejecución correspondiente. Allí aparecen los jobs **Test backend** y **Build Docker image**; las tareas de publicación y despliegue aparecen omitidas cuando el evento no cumple sus condiciones.
 
-Si todos los pasos aparecen como exitosos, la validación terminó correctamente. Si falla, abrí el paso que figura con error para desplegarlo y consultar su registro, donde se muestra el detalle de la comprobación que falló.
+Para inspeccionar una falla, abrí el job que aparece en rojo y después seleccioná el paso que falló para desplegarlo y consultar su registro. El artifact \`test-results\` contiene los resultados TRX de ambas pasadas cuando el job pudo generarlos.
 
-La publicación real ocurre después de integrar un cambio en `development` o `main`.
-
-## Despliegue en Azure
-
-El job `deploy` espera a `validate` y `publish` y se ejecuta únicamente ante un `push` a `main`. Despliega la etiqueta `sha-${{ github.sha }}` que acaba de publicar el mismo workflow y comprueba `/healthcheck` y el catálogo público con al menos un producto. No vuelve a construir la imagen ni aplica migraciones.
-
-Solo este job recibe `id-token: write`, necesario para autenticarse en Azure mediante OIDC. La identidad federada acepta únicamente este repositorio y la rama `main`, y tiene permisos limitados a la aplicación. Los despliegues se serializan mediante el grupo de concurrencia `azure-production`.
-
-En PR, `development` y ejecuciones manuales se omite el despliegue. La infraestructura, los secretos de ejecución y la base deben estar preparados previamente. Ver [configuración y operación del despliegue](azure-deployment.md) y [preparación de Azure SQL](azure-sql.md).
+La publicación real ocurre después de integrar un cambio en \`development\` o \`main\`. El despliegue a Azure ocurre únicamente tras integrar en \`main\`.
