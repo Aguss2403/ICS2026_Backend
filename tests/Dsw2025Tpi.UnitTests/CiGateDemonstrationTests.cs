@@ -7,6 +7,6 @@ public class CiGateDemonstrationTests
     [Fact]
     public void IntentionallyFailsToDemonstrateDockerGate()
     {
-        Assert.True(false, "Fallo intencional de la demostración del TP4.");
+        Assert.Fail("Fallo intencional de la demostración del TP4.");
     }
 }
