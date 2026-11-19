@@ -29,7 +29,7 @@ Solo el job \`deploy\` recibe \`id-token: write\`, necesario para autenticarse e
 
 ## Consultar los resultados
 
-En un pull request, abrí la sección **Checks** y seleccioná **Backend CI** para ver los jobs. También podés ir a **Actions → Backend CI → Validate backend** para abrir la ejecución de la validación. La ejecución presenta los jobs separados **Test backend** y **Build Docker image**; las tareas de publicación y despliegue aparecen omitidas cuando el evento no cumple sus condiciones.
+En un pull request, abrí la sección **Checks** y seleccioná **Backend CI** para ver los jobs. También podés ir a **Actions → Backend CI** y abrir la ejecución correspondiente. Allí aparecen los jobs **Test backend** y **Build Docker image**; las tareas de publicación y despliegue aparecen omitidas cuando el evento no cumple sus condiciones.
 
 Para inspeccionar una falla, abrí el job que aparece en rojo y después seleccioná el paso que falló para desplegarlo y consultar su registro. El artifact \`test-results\` contiene los resultados TRX de ambas pasadas cuando el job pudo generarlos.
 
