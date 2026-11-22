@@ -43,8 +43,10 @@ La migración y el administrador inicial se preparan antes del despliegue siguie
 La identidad administrada `ics2026-backend-github-deploy` tiene el rol `Website Contributor` limitado a esta aplicación. Su credencial federada `github-main` utiliza:
 
 - Emisor: `https://token.actions.githubusercontent.com`.
-- Sujeto: `repo:Aguss2403/ICS2026_Backend:ref:refs/heads/main`.
+- Sujeto: `repo:Aguss2403@133875830/ICS2026_Backend@1398591078:ref:refs/heads/main`.
 - Audiencia: `api://AzureADTokenExchange`.
+
+Este repositorio utiliza el formato de sujeto inmutable de GitHub, que incluye los identificadores permanentes del propietario y del repositorio. Para comprobar el valor vigente, consultar `gh api repos/Aguss2403/ICS2026_Backend/actions/oidc/customization/sub` y agregar `:ref:refs/heads/main` a `sub_claim_prefix`. La confianza de Azure debe coincidir exactamente con ese sujeto; el formato anterior basado solo en nombres produce `AADSTS700213`. La corrección conserva el mismo repositorio, la rama `main`, el emisor y la audiencia, y no amplía el rol de la identidad.
 
 No utiliza contraseña de despliegue ni perfil de publicación. En GitHub, configurar los identificadores como secretos `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` y `AZURE_SUBSCRIPTION_ID`. Configurar las variables `AZURE_WEBAPP_NAME=tp3-ics-haurigot-ibanez-quiroga-salvatore-villanueva` y `AZURE_RESOURCE_GROUP=rg-ics2026-tp3`. Se conserva la configuración de Docker Hub existente.
 
@@ -66,6 +68,10 @@ El 25 de octubre de 2026 se desplegó inicialmente la imagen `ulisesquiroga/ics2
 
 Ese mismo día se trasladó el alojamiento al nombre del equipo indicado en esta guía, dentro del mismo plan gratuito y conservando SQL y la imagen. Se repitieron las comprobaciones de salud, Swagger, login, permisos y catálogo en la nueva URL. Se actualizó el destino de GitHub y se trasladó el permiso de despliegue a la nueva aplicación; la aplicación anterior quedó detenida.
 
-Esta comprobación confirma el alojamiento y la conexión. La primera ejecución completa del nuevo job de despliegue queda pendiente de la revisión e integración de los cambios hasta `main`; debe comprobarse allí antes de dar por validada la entrega automática.
+## Verificación del despliegue automático
 
-Referencias: [contenedores y GitHub Actions](https://learn.microsoft.com/azure/app-service/deploy-container-github-action), [OIDC con Azure](https://learn.microsoft.com/azure/developer/github/connect-from-azure-openid-connect) y [direcciones de salida de App Service](https://learn.microsoft.com/azure/app-service/overview-inbound-outbound-ips).
+El 25 de octubre de 2026 se integró la versión estable mediante la PR #13. La [ejecución de Actions](https://github.com/Aguss2403/ICS2026_Backend/actions/runs/40230919028) validó el commit `cc5990fac9257530da87c3fec1e4f5c958fe3815`, publicó su imagen SHA y la desplegó en Azure. La compilación Release y las 130 pruebas pasaron. El primer intento de autenticación evidenció el formato de sujeto anterior; después de corregir la credencial federada, el segundo intento completó el despliegue reutilizando la misma imagen validada.
+
+Azure quedó configurado con `ulisesquiroga/ics2026-backend:sha-cc5990fac9257530da87c3fec1e4f5c958fe3815`. El pipeline comprobó salud y catálogo. Además se ejecutaron 28 solicitudes contra la URL pública: login y consultas 200; altas 201; modificaciones, desactivación y reactivación 200; datos inválidos 400; SKU duplicados 409; producto inexistente 404; operaciones protegidas sin token 401. Las 28 respuestas coincidieron con lo esperado y los tres productos sintéticos de esa prueba quedaron activos.
+
+Referencias: [contenedores y GitHub Actions](https://learn.microsoft.com/azure/app-service/deploy-container-github-action), [OIDC con Azure](https://learn.microsoft.com/azure/developer/github/connect-from-azure-openid-connect), [sujetos inmutables de GitHub](https://github.blog/changelog/2026-04-23-immutable-subject-claims-for-github-actions-oidc-tokens/) y [direcciones de salida de App Service](https://learn.microsoft.com/azure/app-service/overview-inbound-outbound-ips).

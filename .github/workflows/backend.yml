@@ -18,8 +18,8 @@ env:
   DOCKER_IMAGE: ${{ vars.DOCKER_IMAGE }}
 
 jobs:
-  validate:
-    name: Validate backend
+  tests:
+    name: Test backend
     runs-on: ubuntu-latest
 
     steps:
@@ -37,32 +37,49 @@ jobs:
       - name: Build Release (warnings are errors)
         run: dotnet build Dsw2025Tpi.sln --configuration Release --no-restore --warnaserror
 
-      - name: Build container image
-        run: docker build --file Dockerfile --tag ics2026-backend:ci .
-
-      - name: Generate ephemeral test credentials
-        id: test-credentials
+      - name: Generate synthetic test credentials
         shell: bash
         run: |
-          admin_password="Ci-$(openssl rand -hex 24)"
+          admin_password="$(openssl rand -hex 24)"
           jwt_key="$(openssl rand -hex 32)"
-          printf '::add-mask::%s\n' "$admin_password"
-          printf '::add-mask::%s\n' "$jwt_key"
+          echo "::add-mask::$admin_password"
+          echo "::add-mask::$jwt_key"
           {
-            printf 'admin_password=%s\n' "$admin_password"
-            printf 'jwt_key=%s\n' "$jwt_key"
-          } >> "$GITHUB_OUTPUT"
-          unset admin_password jwt_key
+            printf 'ICS_TEST_ADMIN_PASSWORD=%s\n' "$admin_password"
+            printf 'ICS_TEST_JWT_KEY=%s\n' "$jwt_key"
+          } >> "$GITHUB_ENV"
 
-      - name: Run complete test suite
-        env:
-          ICS_TEST_ADMIN_PASSWORD: ${{ steps.test-credentials.outputs.admin_password }}
-          ICS_TEST_JWT_KEY: ${{ steps.test-credentials.outputs.jwt_key }}
-        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore
+      - name: Run complete test suite (first pass)
+        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/first
+
+      - name: Run complete test suite again (check isolation)
+        run: dotnet test Dsw2025Tpi.sln --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/second
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
+
+  docker-build:
+    name: Build Docker image
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Build verification image
+        run: docker build --file Dockerfile --tag ics2026-backend:ci .
 
   publish:
     name: Publish backend image
-    needs: validate
+    needs: [tests, docker-build]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
 
@@ -98,7 +115,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and publish validated commit
+      - name: Build and publish tested commit
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -114,16 +131,16 @@ jobs:
           {
             echo '## Docker Hub publication'
             echo
-            echo "Validated commit: \`${GITHUB_SHA}\`"
+            echo "Validated commit: \`$GITHUB_SHA\`"
             echo
             echo 'Published tags:'
-            echo "- \`${DOCKER_IMAGE}:latest\`"
-            echo "- \`${DOCKER_IMAGE}:sha-${GITHUB_SHA}\`"
+            echo "- \`$DOCKER_IMAGE:latest\`"
+            echo "- \`$DOCKER_IMAGE:sha-$GITHUB_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: Deploy backend to Azure
-    needs: [validate, publish]
+    needs: [tests, docker-build, publish]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20

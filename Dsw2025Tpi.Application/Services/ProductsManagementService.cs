@@ -28,7 +28,11 @@ public class ProductsManagementService : IProductsManagementService
     public const int InternalCodeMaxLength = 30;
     public const int DescriptionMaxLength = 250;
 
-    public void ValidateRequest(ProductRequest? request)
+    // Shared by Update: an existing product may be edited down to zero stock (e.g. sold out).
+    public void ValidateRequest(ProductRequest? request) => Validate(request, isCreation: false);
+
+    // A new product must enter the catalogue with available units, so creation requires stock > 0.
+    private static void Validate(ProductRequest? request, bool isCreation)
     {
         if (request is null)
             throw new EntityValidationException(new[] { "Los datos del producto son obligatorios." });
@@ -49,7 +53,9 @@ public class ProductsManagementService : IProductsManagementService
             errors.Add($"La descripción no puede superar los {DescriptionMaxLength} caracteres.");
         if (request.CurrentUnitPrice <= 0)
             errors.Add("El precio unitario debe ser mayor a 0.");
-        if (request.StockQuantity < 0)
+        if (isCreation && request.StockQuantity <= 0)
+            errors.Add("La cantidad en stock debe ser mayor a 0 al crear un producto.");
+        else if (!isCreation && request.StockQuantity < 0)
             errors.Add("La cantidad en stock no puede ser negativa.");
         if (errors.Count > 0)
             throw new EntityValidationException(errors);
@@ -85,40 +91,48 @@ public class ProductsManagementService : IProductsManagementService
             : null;
     }
 
-    public async Task<ProductModel.ResponsePagination?> GetProducts(ProductModel.FilterProduct? request=null)
+    public async Task<ProductModel.ResponsePagination?> GetProducts(
+        ProductModel.FilterProduct? request = null, bool includeInactive = false)
     {
-        var isActive = request?.Status == "enabled" ? (bool?) true :
-                       request?.Status == "disabled" ? (bool?) false : null;
+        if (!includeInactive && request?.Status == "disabled")
+            return new ResponsePagination([], 0);
+
+        bool? isActive = request?.Status switch
+        {
+            "enabled" => true,
+            "disabled" => false,
+            _ => includeInactive ? null : true
+        };
+        var candidates = await _repository.GetFiltered<Product>(product =>
+            isActive == null || product.IsActive == isActive) ?? Enumerable.Empty<Product>();
+
         var search = request?.Search;
-        var activeProducts = await _repository.GetFiltered<Product>(p => 
-            (isActive == null || p.IsActive == isActive)
-            &&(string.IsNullOrEmpty(search) || p.Name.Contains(search))
-            );
+        if (!string.IsNullOrEmpty(search))
+        {
+            // Compare in .NET so SQL Server and SQLite use the same case rules.
+            candidates = candidates.Where(product =>
+                product.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                product.Sku.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                product.InternalCode.Contains(search, StringComparison.OrdinalIgnoreCase));
+        }
 
-        if (activeProducts is null || !activeProducts.Any())
-            return new ProductModel.ResponsePagination(new List<ProductModel.ProductResponse>(), 0);
-
-        var products = activeProducts
-            .Select(p => new ProductModel.ProductResponse(
-                p.Id,
-                p.Sku,
-                p.InternalCode,
-                p.Name,
-                p.Description,
-                p.CurrentUnitPrice,
-                p.StockQuantity,
-                p.IsActive))
-            .OrderBy(p => p.Sku)
-            .Skip(((request?.PageNumber ?? 1) - 1) * (request?.PageSize ?? activeProducts.Count()))
-            .Take(request?.PageSize ?? activeProducts.Count())
+        var matches = candidates.ToList();
+        var pageSize = request?.PageSize ?? matches.Count;
+        var pageNumber = request?.PageNumber ?? 1;
+        var items = matches
+            .OrderBy(product => product.Sku)
+            .ThenBy(product => product.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(MapToResponse)
             .ToList();
 
-        return new ProductModel.ResponsePagination(products, activeProducts.Count());
+        return new ResponsePagination(items, matches.Count);
     }
 
     public async Task<ProductModel.ProductResponse> AddProduct(ProductModel.ProductRequest request)
     {
-        ValidateRequest(request);
+        Validate(request, isCreation: true);
 
         var exist = await _repository.First<Product>(p => p.Sku == request.Sku);
         if (exist != null) 

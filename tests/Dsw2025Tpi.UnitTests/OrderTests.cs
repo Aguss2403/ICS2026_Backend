@@ -1,7 +1,7 @@
 using Dsw2025Tpi.Domain.Entities;
 using Xunit;
 
-namespace Dsw2025Tpi.Orders.Tests;
+namespace Dsw2025Tpi.UnitTests;
 
 public class OrderTests
 {

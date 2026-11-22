@@ -1,33 +1,26 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text.Json;
 using Dsw2025Tpi.Application.Dtos;
-using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Data;
 using Dsw2025Tpi.Domain.Entities;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
-namespace Dsw2025Tpi.Api.Tests;
+namespace Dsw2025Tpi.IntegrationTests;
 
 // Exercises the real HTTP pipeline (routing, auth, model binding, middleware) with an in-memory database.
 public class ProductErrorHandlingTests : IDisposable
 {
-    private readonly ProductsApiFactory factory = new();
+    private readonly SqliteApiFactory factory = new();
     private readonly HttpClient client;
 
     public ProductErrorHandlingTests()
     {
-        client = factory.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", factory.AdminToken());
+        client = factory.CreateApiClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", factory.CreateToken());
     }
 
     public void Dispose()
@@ -78,16 +71,23 @@ public class ProductErrorHandlingTests : IDisposable
         return await scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>().Products.CountAsync();
     }
 
+    // TP4-02 integration scenario 3: the existing row is seeded directly, so the test does not depend on POST succeeding.
     [Fact]
-    public async Task CreatingDuplicateSkuReturnsConflict()
+    public async Task CreatingDuplicateSkuReturnsConflictAndKeepsSingleRow()
     {
-        await Create(Product(sku: "DUP-1"));
+        await factory.SeedAsync(db =>
+        {
+            db.Products.Add(TestData.Product(sku: "DUP-1"));
+            return Task.CompletedTask;
+        });
 
         var message = await AssertError(await client.PostAsJsonAsync("/api/products", Product(sku: "DUP-1", name: "Otro")),
             HttpStatusCode.Conflict);
 
         Assert.Contains("DUP-1", message);
-        Assert.Equal(1, await StoredCount());
+        var rows = await factory.ReadAsync(db => db.Products.AsNoTracking().Where(p => p.Sku == "DUP-1").ToListAsync());
+        var stored = Assert.Single(rows);
+        Assert.Equal("Test product", stored.Name);
     }
 
     [Fact]
@@ -157,9 +157,10 @@ public class ProductErrorHandlingTests : IDisposable
     public async Task ValuesAtTheLimitsAreAccepted()
     {
         var created = await Create(Product(sku: new string('S', 20), internalCode: new string('I', 30),
-            name: new string('N', 50), description: new string('D', 250), price: 0.01m, stock: 0));
+            name: new string('N', 50), description: new string('D', 250), price: 0.01m, stock: 1));
 
-        Assert.Equal(0, created.StockQuantity);
+        // Creation requires positive stock: 1 is the lowest accepted value (zero is only allowed when editing).
+        Assert.Equal(1, created.StockQuantity);
         Assert.NotNull(await Stored(created.Id));
     }
 
@@ -226,36 +227,8 @@ public class ProductErrorHandlingTests : IDisposable
         Assert.False((await toggled.Content.ReadFromJsonAsync<ProductModel.ProductResponse>())!.IsActive);
 
         var list = await client.GetFromJsonAsync<ProductModel.ResponsePagination>("/api/products");
-        Assert.Equal(1, list!.Total);
+        Assert.Equal(0, list!.Total);
+        Assert.Empty(list.Items);
     }
 
-    private sealed class ProductsApiFactory : WebApplicationFactory<Program>
-    {
-        private readonly string databaseName = Guid.NewGuid().ToString();
-        private readonly Dictionary<string, string?> settings = new()
-        {
-            // Never opened: the provider is replaced below. It only has to pass startup validation.
-            ["ConnectionStrings:DefaultConnection"] = "Server=localhost;Database=ProductErrorTests;Integrated Security=True",
-            ["Jwt:Key"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
-            ["Jwt:Issuer"] = "product-tests",
-            ["Jwt:Audience"] = "product-tests",
-            ["Jwt:ExpireInMinutes"] = "60",
-            ["Logging:LogLevel:Default"] = "None"
-        };
-
-        public string AdminToken() => new JwtTokenServices(
-            new ConfigurationBuilder().AddInMemoryCollection(settings).Build()).GenerateToken("product-admin", Role.Admin);
-
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            builder.UseEnvironment("Development");
-            foreach (var (key, value) in settings) builder.UseSetting(key, value);
-            builder.ConfigureServices(services =>
-            {
-                services.RemoveAll<DbContextOptions<Dsw2025TpiContext>>();
-                services.RemoveAll<IDbContextOptionsConfiguration<Dsw2025TpiContext>>();
-                services.AddDbContext<Dsw2025TpiContext>(options => options.UseInMemoryDatabase(databaseName));
-            });
-        }
-    }
 }

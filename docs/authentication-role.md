@@ -17,7 +17,7 @@ No se modifican permisos, DTO, entidades, esquema, almacenamiento de contraseña
 
 ## Pruebas
 
-`Dsw2025Tpi.Api.Tests/AuthenticationServiceTests.cs` ejecuta el servicio y el controlador reales con una base EF Core InMemory aislada por caso:
+`tests/Dsw2025Tpi.IntegrationTests/AuthenticationServiceTests.cs` ejecuta el servicio y el controlador reales con una base EF Core InMemory aislada por caso:
 
 - Login válido para `admin` y `user`: verifica la respuesta, la firma, emisor, destinatario, vigencia, usuario y rol del JWT.
 - Usuario sin rol: verifica explícitamente la navegación nula, la excepción controlada y la respuesta `401` sin un DTO de sesión ni token.
@@ -34,11 +34,7 @@ Desde la raíz del repositorio, con SDK .NET 8:
 
 ```powershell
 dotnet build Dsw2025Tpi.sln --configuration Release
-dotnet test Dsw2025Tpi.Api.Tests --configuration Release --no-build --filter FullyQualifiedName~AuthenticationServiceTests
+dotnet test tests/Dsw2025Tpi.IntegrationTests --configuration Release --no-build --filter FullyQualifiedName~AuthenticationServiceTests
 ```
 
-Para ejecutar toda la solución, cargar antes las variables sintéticas `ICS_TEST_ADMIN_PASSWORD` y `ICS_TEST_JWT_KEY` que ya requiere la suite de seed; ver [admin-seed.md](admin-seed.md). No configurar `ICS_TEST_SQL_CONNECTION` para la ejecución predeterminada con SQLite en memoria.
-
-```powershell
-dotnet test Dsw2025Tpi.sln --configuration Release --no-build
-```
+La suite completa se ejecuta con `dotnet test Dsw2025Tpi.sln`; no requiere variables ni SQL Server. Ver [pruebas TP4](tp4-testing.md).

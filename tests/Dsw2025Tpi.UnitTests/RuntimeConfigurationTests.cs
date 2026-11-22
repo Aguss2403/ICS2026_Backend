@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Dsw2025Tpi.Api.Tests;
+namespace Dsw2025Tpi.UnitTests;
 
 public class RuntimeConfigurationTests
 {
